@@ -141,6 +141,11 @@ public class Inventario extends javax.swing.JFrame {
         jButton2.setBackground(new java.awt.Color(0, 0, 51));
         jButton2.setForeground(new java.awt.Color(255, 255, 255));
         jButton2.setText("Agregar un producto");
+        jButton2.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton2ActionPerformed(evt);
+            }
+        });
 
         jButton3.setBackground(new java.awt.Color(0, 0, 51));
         jButton3.setForeground(new java.awt.Color(255, 255, 255));
@@ -336,6 +341,10 @@ public class Inventario extends javax.swing.JFrame {
     private void jButton5ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton5ActionPerformed
         jButton5.addActionListener(e -> new FacturaInventario().setVisible(true));
     }//GEN-LAST:event_jButton5ActionPerformed
+
+    private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
+        jButton2.addActionListener(e -> new NuevoProducto().setVisible(true));
+    }//GEN-LAST:event_jButton2ActionPerformed
 
     public static void main(String args[]) {
 
