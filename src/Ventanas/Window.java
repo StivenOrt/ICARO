@@ -1,4 +1,5 @@
 package Ventanas;
+
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -176,24 +177,25 @@ public class Window extends javax.swing.JFrame {
             consulta.setString(2, contraseña);
             resultado = consulta.executeQuery();
 
-        if (resultado.next()) { // Si el usuario existe
-            String rolUsuario = resultado.getString("rol");
+        if (resultado.next()) {
+    String rolUsuario = resultado.getString("rol");
+    int idUsuarioLogueado = resultado.getInt("idusuario");
+    String nombreCajero = resultado.getString("Nombre"); // Obtén el nombre aquí
 
-        if ("Administrador".equals(rolUsuario)) {
-            new VentanaPrincipal().setVisible(true);
+    if ("Administrador".equals(rolUsuario)) {
+        VentanaPrincipal ventanaPrincipal = new VentanaPrincipal(nombreCajero); // Pasa el nombre
+        ventanaPrincipal.setVisible(true);
     } else if ("Cajero".equals(rolUsuario)) {
-        new VentanaPrincipal().setVisible(true);
-        new WindowBase().setVisible(true);
-    } else {
-        JOptionPane.showMessageDialog(null, "Rol no reconocido, contacta al soporte.");
+        VentanaPrincipal ventanaPrincipal = new VentanaPrincipal(nombreCajero); // Pasa el nombre
+        ventanaPrincipal.setVisible(true);
+        // ...
     }
-
-    dispose(); // Cierra la ventana de login solo si la autenticación es válida
+    dispose();
 } else {
     JOptionPane.showMessageDialog(null, "Usuario o contraseña incorrectos.");
 }    
         } catch (Exception e) {
-            
+            e.printStackTrace();
         }
     }//GEN-LAST:event_jButton1ActionPerformed
 

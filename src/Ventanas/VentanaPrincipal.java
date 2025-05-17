@@ -4,17 +4,33 @@ import java.awt.Image;
 import javax.swing.ImageIcon;
 import javax.swing.JFrame;
 import javax.swing.SwingConstants;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import javax.swing.JLabel;
+import java.sql.SQLException;
 
 public class VentanaPrincipal extends javax.swing.JFrame {
-    
-  
+
+    private String nombreCajero;
+
+    public VentanaPrincipal(String nombre) {
+        this.nombreCajero = nombre;
+        initComponents();
+        lblCajeroEnTurno.setText(this.nombreCajero);
+        ajustarBotones();
+        setLocationRelativeTo(null);
+    }
+
     public VentanaPrincipal() {
         initComponents();
         ajustarBotones();
         setLocationRelativeTo(null);
     }
 
-    
+
     private void ajustarBotones() {
     
     ImageIcon originalIconCaja = new ImageIcon(getClass().getResource("/imagenes/CajaAbierta.png"));
@@ -100,6 +116,8 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     jButton11.setHorizontalTextPosition(SwingConstants.RIGHT);
     jButton11.setVerticalTextPosition(SwingConstants.CENTER);
 }
+    
+    
 
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
@@ -134,6 +152,7 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         Total = new javax.swing.JLabel();
         jLabel3 = new javax.swing.JLabel();
         NombreCajero = new javax.swing.JLabel();
+        lblCajeroEnTurno = new javax.swing.JLabel();
         jPanel2 = new javax.swing.JPanel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
@@ -281,7 +300,7 @@ public class VentanaPrincipal extends javax.swing.JFrame {
                                 .addContainerGap())))
                     .addGroup(PanelSuperiorLayout.createSequentialGroup()
                         .addComponent(AlmacenRopa)
-                        .addGap(17, 843, Short.MAX_VALUE))))
+                        .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))
             .addComponent(VentaRopa, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
         );
         PanelSuperiorLayout.setVerticalGroup(
@@ -432,6 +451,9 @@ public class VentanaPrincipal extends javax.swing.JFrame {
 
         NombreCajero.setBackground(new java.awt.Color(204, 255, 255));
 
+        lblCajeroEnTurno.setFont(new java.awt.Font("Arial", 0, 24)); // NOI18N
+        lblCajeroEnTurno.setText("jLabel4");
+
         javax.swing.GroupLayout PanelInferiorLayout = new javax.swing.GroupLayout(PanelInferior);
         PanelInferior.setLayout(PanelInferiorLayout);
         PanelInferiorLayout.setHorizontalGroup(
@@ -441,7 +463,9 @@ public class VentanaPrincipal extends javax.swing.JFrame {
                 .addGroup(PanelInferiorLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                     .addGroup(PanelInferiorLayout.createSequentialGroup()
                         .addComponent(jLabel3)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addComponent(lblCajeroEnTurno, javax.swing.GroupLayout.PREFERRED_SIZE, 164, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(12, 12, 12)
                         .addComponent(NombreCajero, javax.swing.GroupLayout.PREFERRED_SIZE, 404, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(67, 67, 67))
                     .addGroup(PanelInferiorLayout.createSequentialGroup()
@@ -456,7 +480,7 @@ public class VentanaPrincipal extends javax.swing.JFrame {
                 .addComponent(jButton13, javax.swing.GroupLayout.PREFERRED_SIZE, 160, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(jLabel2)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 33, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addComponent(Total, javax.swing.GroupLayout.PREFERRED_SIZE, 106, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap())
         );
@@ -476,10 +500,12 @@ public class VentanaPrincipal extends javax.swing.JFrame {
                         .addComponent(Total, javax.swing.GroupLayout.PREFERRED_SIZE, 54, javax.swing.GroupLayout.PREFERRED_SIZE)))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(PanelInferiorLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(NombreCajero, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addGroup(PanelInferiorLayout.createSequentialGroup()
-                        .addComponent(jLabel3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addContainerGap())
-                    .addComponent(NombreCajero, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
+                        .addGroup(PanelInferiorLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                            .addComponent(jLabel3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(lblCajeroEnTurno, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                        .addContainerGap())))
         );
 
         jPanel2.setBackground(new java.awt.Color(0, 0, 51));
@@ -622,5 +648,6 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JTextField jTextField1;
     private javax.swing.JTextField jTextField3;
+    private javax.swing.JLabel lblCajeroEnTurno;
     // End of variables declaration//GEN-END:variables
 }
