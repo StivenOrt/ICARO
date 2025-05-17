@@ -345,7 +345,7 @@ public class Inventario extends javax.swing.JFrame {
     }//GEN-LAST:event_jButton5ActionPerformed
 
     private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
-        jButton2.addActionListener(e -> new NuevoProducto().setVisible(true));
+        new NuevoProducto().setVisible(true);
     }//GEN-LAST:event_jButton2ActionPerformed
 
     public static void main(String args[]) {
