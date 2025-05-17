@@ -563,7 +563,7 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     }//GEN-LAST:event_jTextField1ActionPerformed
 
     private void jButton13ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton13ActionPerformed
-        jButton13.addActionListener(e -> new Interfazcobro().setVisible(true));  
+        new Interfazcobro().setVisible(true);  
     }//GEN-LAST:event_jButton13ActionPerformed
 
     private void jButton9ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton9ActionPerformed
@@ -571,45 +571,41 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     }//GEN-LAST:event_jButton9ActionPerformed
 
     private void jButton12ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton12ActionPerformed
-        jButton12.addActionListener(e -> new factura().setVisible(true));
+       new factura().setVisible(true);
     }//GEN-LAST:event_jButton12ActionPerformed
 
     private void jButton4ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton4ActionPerformed
-        jButton4.addActionListener(e -> {
     Proveedores proveedoresVentana = new Proveedores(this.conexionBD); // ¡Pasa la conexión!
     proveedoresVentana.setVisible(true);
-});
     }//GEN-LAST:event_jButton4ActionPerformed
 
     private void jButton10ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton10ActionPerformed
-        jButton10.addActionListener(e -> new EliminarProdcuto().setVisible(true));
+        new EliminarProdcuto().setVisible(true);
     }//GEN-LAST:event_jButton10ActionPerformed
 
     private void jButton8ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton8ActionPerformed
-        jButton8.addActionListener(e -> {
     new Window().setVisible(true); // Abrir la ventana de inicio de sesión
     dispose(); // Cerrar la VentanaPrincipal
-});
     }//GEN-LAST:event_jButton8ActionPerformed
 
     private void jButton3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton3ActionPerformed
-        jButton3.addActionListener(e -> new ListaUsuarios().setVisible(true));
+        new ListaUsuarios().setVisible(true);
     }//GEN-LAST:event_jButton3ActionPerformed
 
     private void jButton6ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton6ActionPerformed
-        jButton6.addActionListener(e -> new Ventas().setVisible(true));
+        new Ventas().setVisible(true);
     }//GEN-LAST:event_jButton6ActionPerformed
 
     private void jButton5ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton5ActionPerformed
-        jButton5.addActionListener(e -> new HistorialVentas().setVisible(true));
+        new HistorialVentas().setVisible(true);
     }//GEN-LAST:event_jButton5ActionPerformed
 
     private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
-        jButton2.addActionListener(e -> new Inventario().setVisible(true));
+        new Inventario().setVisible(true);
     }//GEN-LAST:event_jButton2ActionPerformed
 
     private void jButton11ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton11ActionPerformed
-        jButton11.addActionListener(e-> new RevisarProducto().setVisible(true));
+        new RevisarProducto().setVisible(true);
     }//GEN-LAST:event_jButton11ActionPerformed
 
     public static void main(String args[]) {
