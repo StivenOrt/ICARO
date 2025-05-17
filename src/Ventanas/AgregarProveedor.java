@@ -1,12 +1,19 @@
-
 package Ventanas;
 
 import javax.swing.JFrame;
+import java.sql.Connection;
+import javax.swing.JOptionPane;
+import java.sql.SQLException;
+import java.sql.PreparedStatement;
+
 
 
 public class AgregarProveedor extends javax.swing.JFrame {
 
-    public AgregarProveedor() {
+    private Connection conexionBD;
+   
+    public AgregarProveedor(java.sql.Connection conexion) {
+        this.conexionBD = conexion;
         initComponents();
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -214,14 +221,65 @@ public class AgregarProveedor extends javax.swing.JFrame {
     }//GEN-LAST:event_jTextField4ActionPerformed
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
-        // TODO add your handling code here:
+        
+        PreparedStatement consulta = null;
+
+    try {
+        // Obtener los datos de los campos de texto
+        String claveProveedor = jTextField1.getText().trim();
+        String nombre = jTextField2.getText().trim();
+        String telefono = jTextField3.getText().trim();
+        String telefono2 = jTextField4.getText().trim();
+        String direccion = jTextField5.getText().trim();
+        String informacionExtra = jTextField6.getText().trim();
+
+        // Crear la consulta SQL INSERT
+        String sql = "INSERT INTO proveedor (IdProveedor, Nombre, Telefono, Correo, Direccion, InformacionExtra) VALUES (?, ?, ?, ?, ?, ?)";
+        consulta = conexionBD.prepareStatement(sql); // ¡Usamos la conexión recibida!
+
+        // Asignar los valores a los parámetros de la consulta
+        consulta.setString(1, claveProveedor);
+        consulta.setString(2, nombre);
+        consulta.setString(3, telefono);
+        consulta.setString(4, ""); // Asumiendo que la columna Correo puede estar vacía
+        consulta.setString(5, direccion);
+        consulta.setString(6, informacionExtra); // Usando 'rol' para 'Informacion extra'
+
+        // Ejecutar la consulta
+        int filasAfectadas = consulta.executeUpdate();
+
+        // Verificar si la inserción fue exitosa
+        if (filasAfectadas > 0) {
+            JOptionPane.showMessageDialog(this, "Proveedor agregado correctamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+            // Limpiar los campos después de agregar
+            jTextField1.setText("");
+            jTextField2.setText("");
+            jTextField3.setText("");
+            jTextField4.setText("");
+            jTextField5.setText("");
+            jTextField6.setText("");
+        } else {
+            JOptionPane.showMessageDialog(this, "No se pudo agregar el proveedor.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+
+    } catch (SQLException e) {
+        JOptionPane.showMessageDialog(this, "Error al ejecutar la consulta: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        e.printStackTrace();
+    } finally {
+        // Cerrar la consulta
+        try {
+            if (consulta != null) consulta.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
     }//GEN-LAST:event_jButton1ActionPerformed
 
     public static void main(String args[]) {
     
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
-                new AgregarProveedor().setVisible(true);
+             
             }
         });
     }

@@ -1,10 +1,10 @@
 package Ventanas;
 
+import Conexiones.Conexion;
 import java.awt.Image;
 import javax.swing.ImageIcon;
 import javax.swing.JFrame;
 import javax.swing.SwingConstants;
-import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -14,21 +14,18 @@ import java.sql.SQLException;
 
 public class VentanaPrincipal extends javax.swing.JFrame {
 
+    private Connection conexionBD;
     private String nombreCajero;
 
-    public VentanaPrincipal(String nombre) {
-        this.nombreCajero = nombre;
-        initComponents();
-        lblCajeroEnTurno.setText(this.nombreCajero);
-        ajustarBotones();
-        setLocationRelativeTo(null);
-    }
-
-    public VentanaPrincipal() {
-        initComponents();
-        ajustarBotones();
-        setLocationRelativeTo(null);
-    }
+    public VentanaPrincipal(Connection conexion, String nombre) {
+    this.conexionBD = conexion;
+    this.nombreCajero = nombre;
+    initComponents();
+    lblCajeroEnTurno.setText(this.nombreCajero);
+    ajustarBotones();
+    setLocationRelativeTo(null);
+    setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+}
 
 
     private void ajustarBotones() {
@@ -116,7 +113,11 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     jButton11.setHorizontalTextPosition(SwingConstants.RIGHT);
     jButton11.setVerticalTextPosition(SwingConstants.CENTER);
 }
-    
+    private void cerrarVentana() {
+        Conexion.cerrarConexion(); // Cerrar la conexión al cerrar la ventana principal
+        dispose();
+        System.exit(0);
+    }
     
 
     @SuppressWarnings("unchecked")
@@ -574,7 +575,10 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     }//GEN-LAST:event_jButton12ActionPerformed
 
     private void jButton4ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton4ActionPerformed
-        jButton4.addActionListener(e -> new Proveedores().setVisible(true));
+        jButton4.addActionListener(e -> {
+    Proveedores proveedoresVentana = new Proveedores(this.conexionBD); // ¡Pasa la conexión!
+    proveedoresVentana.setVisible(true);
+});
     }//GEN-LAST:event_jButton4ActionPerformed
 
     private void jButton10ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton10ActionPerformed
@@ -612,7 +616,7 @@ public class VentanaPrincipal extends javax.swing.JFrame {
 
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
-                new VentanaPrincipal().setVisible(true);
+                
             }
         });
     }

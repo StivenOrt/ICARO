@@ -17,6 +17,7 @@ public class Window extends javax.swing.JFrame {
     public Window() {
         initComponents();
         setLocationRelativeTo(null);
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
     }
 
     
@@ -158,14 +159,15 @@ public class Window extends javax.swing.JFrame {
         pack();
     }// </editor-fold>//GEN-END:initComponents
     
+     private Connection conexionBD;
     
-    int intentos = 0;
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
 
         Connection conexion = Conexion.conectar();
+        conexionBD = conexion;
         String usuario = campo_usuario.getText();
         String contraseña = new String(campo_pass.getPassword());
-        PreparedStatement consulta;
+        PreparedStatement consulta = null;
         ResultSet resultado;
         
 
@@ -178,24 +180,23 @@ public class Window extends javax.swing.JFrame {
             resultado = consulta.executeQuery();
 
         if (resultado.next()) {
-    String rolUsuario = resultado.getString("rol");
-    int idUsuarioLogueado = resultado.getInt("idusuario");
-    String nombreCajero = resultado.getString("Nombre"); // Obtén el nombre aquí
+                String rolUsuario = resultado.getString("rol");
+                int idUsuarioLogueado = resultado.getInt("idusuario");
+                String nombreCajero = resultado.getString("Nombre");
 
-    if ("Administrador".equals(rolUsuario)) {
-        VentanaPrincipal ventanaPrincipal = new VentanaPrincipal(nombreCajero); // Pasa el nombre
-        ventanaPrincipal.setVisible(true);
+        if ("Administrador".equals(rolUsuario)) {
+                VentanaPrincipal ventanaPrincipal = new VentanaPrincipal(conexionBD, nombreCajero); // ¡Pasa la conexión y el nombre!
+                ventanaPrincipal.setVisible(true);
     } else if ("Cajero".equals(rolUsuario)) {
-        VentanaPrincipal ventanaPrincipal = new VentanaPrincipal(nombreCajero); // Pasa el nombre
-        ventanaPrincipal.setVisible(true);
-        // ...
+            VentanaPrincipal ventanaPrincipal = new VentanaPrincipal(conexionBD, nombreCajero); // ¡Pasa la conexión y el nombre!
+            ventanaPrincipal.setVisible(true);
     }
     dispose();
 } else {
     JOptionPane.showMessageDialog(null, "Usuario o contraseña incorrectos.");
 }    
         } catch (Exception e) {
-            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "Error al iniciar sesión.");
         }
     }//GEN-LAST:event_jButton1ActionPerformed
 
