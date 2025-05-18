@@ -1,7 +1,10 @@
 package Ventanas;
 
 import Conexiones.Conexion;
+import java.awt.GraphicsEnvironment;
+import java.awt.Rectangle;
 import java.awt.Image;
+import javax.swing.*;
 import javax.swing.ImageIcon;
 import javax.swing.JFrame;
 import javax.swing.SwingConstants;
@@ -38,13 +41,29 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     }
     
     public VentanaPrincipal(Connection conexion, String nombre) {
+    super("Almacén de Ropa");
     this.conexionBD = conexion;
     this.nombreCajero = nombre;
+    
     initComponents();
     lblCajeroEnTurno.setText(this.nombreCajero);
     ajustarBotones();
+    
+    pack();
+    
+    Rectangle maxBounds = GraphicsEnvironment
+            .getLocalGraphicsEnvironment()
+            .getMaximumWindowBounds();
+    
+    setBounds(maxBounds);    
+    setResizable(true);
+    SwingUtilities.invokeLater(() ->
+        setExtendedState(getExtendedState() | JFrame.MAXIMIZED_BOTH)
+    );
     setLocationRelativeTo(null);
     setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+    setVisible(true);
+
 }
 
     private void ajustarBotones() {
