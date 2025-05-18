@@ -1,23 +1,50 @@
 package Ventanas;
 
-import Conexiones.Conexion;
 import java.sql.Connection;
-import java.time.LocalTime;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.LocalDate;
-import javax.swing.JTextField;
 
 
 public class WindowBase extends javax.swing.JFrame {
-
-    public WindowBase() {
-        initComponents();
-        setLocationRelativeTo(null);
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+    
+    private Connection conexionBD;
+    private VentanaPrincipal ventanaPrincipal; // Referencia a la ventana principal
+    private String nombreCajero;
+    
+    public WindowBase(VentanaPrincipal ventanaPrincipal, Connection conexionBD, String nombreCajero) {
+    this.ventanaPrincipal = ventanaPrincipal;
+    this.conexionBD = conexionBD;
+    this.nombreCajero = nombreCajero;
+    initComponents();
+    setLocationRelativeTo(null);
+    setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
     }
+    
+    private void guardarBaseDeDatos(String nombreCajero, double valorBase) {
+     PreparedStatement consulta = null;
+    try {
+        String sql = "INSERT INTO base_diaria (valor_base, usuario_registro, fecha) VALUES (?, ?, ?)";
+        consulta = conexionBD.prepareStatement(sql);
+        consulta.setDouble(1, valorBase);
+        consulta.setString(2, nombreCajero);
+        consulta.setDate(3, java.sql.Date.valueOf(LocalDate.now()));
+        int filasAfectadas = consulta.executeUpdate();
+        // ... (resto del código) ...
+    } catch (SQLException e) {
+        System.err.println("Error al guardar la base diaria: " + e.getMessage());
+        JOptionPane.showMessageDialog(WindowBase.this, "Error al guardar la base diaria.", "Error", JOptionPane.ERROR_MESSAGE);
+    } finally {
+        try {
+            if (consulta != null) consulta.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
 
     
     @SuppressWarnings("unchecked")
@@ -27,11 +54,11 @@ public class WindowBase extends javax.swing.JFrame {
         Panel1Base = new javax.swing.JPanel();
         Nombre_Programa = new javax.swing.JLabel();
         Panel2Base = new javax.swing.JPanel();
-        Boton_Ingresar = new javax.swing.JButton();
+        btnIngresarPresupuesto = new javax.swing.JButton();
         Info = new javax.swing.JLabel();
         Panel3Base = new javax.swing.JPanel();
         Valor_info = new javax.swing.JLabel();
-        Valor_Ingresar = new javax.swing.JTextField();
+        txtPresupuestoInicial = new javax.swing.JTextField();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -48,12 +75,12 @@ public class WindowBase extends javax.swing.JFrame {
         Panel2Base.setBackground(new java.awt.Color(204, 255, 255));
         Panel2Base.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 0, 0)));
 
-        Boton_Ingresar.setBackground(new java.awt.Color(51, 153, 255));
-        Boton_Ingresar.setFont(new java.awt.Font("Arial", 0, 18)); // NOI18N
-        Boton_Ingresar.setText("Ingresar");
-        Boton_Ingresar.addActionListener(new java.awt.event.ActionListener() {
+        btnIngresarPresupuesto.setBackground(new java.awt.Color(51, 153, 255));
+        btnIngresarPresupuesto.setFont(new java.awt.Font("Arial", 0, 18)); // NOI18N
+        btnIngresarPresupuesto.setText("Ingresar");
+        btnIngresarPresupuesto.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                Boton_IngresarActionPerformed(evt);
+                btnIngresarPresupuestoActionPerformed(evt);
             }
         });
 
@@ -66,18 +93,18 @@ public class WindowBase extends javax.swing.JFrame {
         Valor_info.setFont(new java.awt.Font("Arial", 0, 24)); // NOI18N
         Valor_info.setText("VALOR :");
 
-        Valor_Ingresar.setBackground(new java.awt.Color(204, 255, 255));
-        Valor_Ingresar.setFont(new java.awt.Font("Arial", 0, 24)); // NOI18N
-        Valor_Ingresar.setToolTipText("");
-        Valor_Ingresar.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 0, 0)));
-        Valor_Ingresar.addActionListener(new java.awt.event.ActionListener() {
+        txtPresupuestoInicial.setBackground(new java.awt.Color(204, 255, 255));
+        txtPresupuestoInicial.setFont(new java.awt.Font("Arial", 0, 24)); // NOI18N
+        txtPresupuestoInicial.setToolTipText("");
+        txtPresupuestoInicial.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 0, 0)));
+        txtPresupuestoInicial.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                Valor_IngresarActionPerformed(evt);
+                txtPresupuestoInicialActionPerformed(evt);
             }
         });
-        Valor_Ingresar.addKeyListener(new java.awt.event.KeyAdapter() {
+        txtPresupuestoInicial.addKeyListener(new java.awt.event.KeyAdapter() {
             public void keyTyped(java.awt.event.KeyEvent evt) {
-                Valor_IngresarKeyTyped(evt);
+                txtPresupuestoInicialKeyTyped(evt);
             }
         });
 
@@ -89,7 +116,7 @@ public class WindowBase extends javax.swing.JFrame {
                 .addGap(16, 16, 16)
                 .addComponent(Valor_info)
                 .addGap(18, 18, 18)
-                .addComponent(Valor_Ingresar, javax.swing.GroupLayout.PREFERRED_SIZE, 211, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(txtPresupuestoInicial, javax.swing.GroupLayout.PREFERRED_SIZE, 211, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap(84, Short.MAX_VALUE))
         );
         Panel3BaseLayout.setVerticalGroup(
@@ -98,7 +125,7 @@ public class WindowBase extends javax.swing.JFrame {
                 .addGap(64, 64, 64)
                 .addGroup(Panel3BaseLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(Valor_info)
-                    .addComponent(Valor_Ingresar, javax.swing.GroupLayout.PREFERRED_SIZE, 41, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(txtPresupuestoInicial, javax.swing.GroupLayout.PREFERRED_SIZE, 41, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addContainerGap(49, Short.MAX_VALUE))
         );
 
@@ -110,7 +137,7 @@ public class WindowBase extends javax.swing.JFrame {
                 .addGroup(Panel2BaseLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(Panel2BaseLayout.createSequentialGroup()
                         .addGap(198, 198, 198)
-                        .addComponent(Boton_Ingresar))
+                        .addComponent(btnIngresarPresupuesto))
                     .addGroup(Panel2BaseLayout.createSequentialGroup()
                         .addGap(42, 42, 42)
                         .addGroup(Panel2BaseLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -126,7 +153,7 @@ public class WindowBase extends javax.swing.JFrame {
                 .addGap(18, 18, 18)
                 .addComponent(Panel3Base, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addGap(18, 18, 18)
-                .addComponent(Boton_Ingresar)
+                .addComponent(btnIngresarPresupuesto)
                 .addGap(39, 39, 39))
         );
 
@@ -146,76 +173,46 @@ public class WindowBase extends javax.swing.JFrame {
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
-    private void Boton_IngresarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_Boton_IngresarActionPerformed
-        Boton_Ingresar.addActionListener(e -> {
+    private void btnIngresarPresupuestoActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnIngresarPresupuestoActionPerformed
+        String presupuesto = txtPresupuestoInicial.getText().trim();
     try {
-        Connection conexion = Conexion.conectar(); // Conectar a la base de datos
-
-        String sql = "INSERT INTO base_diaria (id_base, fecha, valor_base, usuario_registro, hora_registro, observaciones) VALUES (?, ?, ?, ?, ?)";
-        PreparedStatement consulta = conexion.prepareStatement(sql);
-
-        // Obtener los valores ingresados
-        String fecha = LocalDate.now().toString(); // Fecha actual en formato YYYY-MM-DD
-        double valorBase = Double.parseDouble(Valor_Ingresar.getText()); // Convertir a decimal
-        String usuario = "Cajero"; // Puedes obtener el usuario dinámicamente si es necesario
-        String horaActual = LocalTime.now().toString(); // Hora actual en formato HH:MM:SS
-        String observaciones = "Registro automático"; // Puedes obtenerlo desde un campo si es necesario
-
-        // Asignar valores a la consulta SQL
-        consulta.setString(1, fecha);
-        consulta.setDouble(2, valorBase);
-        consulta.setString(3, usuario);
-        consulta.setString(4, horaActual);
-        consulta.setString(5, observaciones);
-
-        // Ejecutar la consulta
-        int filasAfectadas = consulta.executeUpdate();
-
-        if (filasAfectadas > 0) {
-            JOptionPane.showMessageDialog(null, "Base diaria registrada correctamente!");
-        } else {
-            JOptionPane.showMessageDialog(null, "Error al registrar la base diaria.");
-        }
-
-        // Cerrar conexión
-        consulta.close();
-        conexion.close();
-
-    } catch (Exception ex) {
-        JOptionPane.showMessageDialog(null, "Error: " + ex.getMessage());
-        ex.printStackTrace();
+        double valorPresupuesto = Double.parseDouble(presupuesto);
+        guardarBaseDeDatos(nombreCajero, valorPresupuesto);
+        ventanaPrincipal.setPresupuestoBase(String.valueOf(valorPresupuesto));
+        dispose();
+    } catch (NumberFormatException ex) {
+        JOptionPane.showMessageDialog(this, "Ingrese un valor numérico válido.", "Error", JOptionPane.ERROR_MESSAGE);
     }
-});
-    }//GEN-LAST:event_Boton_IngresarActionPerformed
+    }//GEN-LAST:event_btnIngresarPresupuestoActionPerformed
 
-    private void Valor_IngresarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_Valor_IngresarActionPerformed
+    private void txtPresupuestoInicialActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txtPresupuestoInicialActionPerformed
         
-    }//GEN-LAST:event_Valor_IngresarActionPerformed
+    }//GEN-LAST:event_txtPresupuestoInicialActionPerformed
 
-    private void Valor_IngresarKeyTyped(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_Valor_IngresarKeyTyped
+    private void txtPresupuestoInicialKeyTyped(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_txtPresupuestoInicialKeyTyped
         char c = evt.getKeyChar();
         if (!Character.isDigit(c)) {
             evt.consume();
         }
-    }//GEN-LAST:event_Valor_IngresarKeyTyped
+    }//GEN-LAST:event_txtPresupuestoInicialKeyTyped
 
    
     public static void main(String args[]) {
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
-                new WindowBase().setVisible(true);
+                
             }
         });
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JButton Boton_Ingresar;
     private javax.swing.JLabel Info;
     private javax.swing.JLabel Nombre_Programa;
     private javax.swing.JPanel Panel1Base;
     private javax.swing.JPanel Panel2Base;
     private javax.swing.JPanel Panel3Base;
-    private javax.swing.JTextField Valor_Ingresar;
     private javax.swing.JLabel Valor_info;
+    private javax.swing.JButton btnIngresarPresupuesto;
+    private javax.swing.JTextField txtPresupuestoInicial;
     // End of variables declaration//GEN-END:variables
 }

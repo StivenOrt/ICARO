@@ -5,18 +5,38 @@ import java.awt.Image;
 import javax.swing.ImageIcon;
 import javax.swing.JFrame;
 import javax.swing.SwingConstants;
-import java.sql.DriverManager;
 import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import javax.swing.JLabel;
-import java.sql.SQLException;
+
+
 
 public class VentanaPrincipal extends javax.swing.JFrame {
 
     private Connection conexionBD;
     private String nombreCajero;
+    
+    public void setPresupuestoBase(String presupuesto) {
 
+        if (lblPresupuestoBase != null) {
+        lblPresupuestoBase.setText(presupuesto); // Ajusta el texto para que coincida con tu etiqueta
+    } else {
+        System.err.println("lblPresupuestoBase no está inicializado en VentanaPrincipal.");
+    }
+    }
+
+    public VentanaPrincipal(String nombre) {
+        this.nombreCajero = nombre;
+        initComponents();
+        lblCajeroEnTurno.setText(this.nombreCajero);
+        ajustarBotones();
+        setLocationRelativeTo(null);
+    }
+
+    public VentanaPrincipal() {
+        initComponents();
+        ajustarBotones();
+        setLocationRelativeTo(null);
+    }
+    
     public VentanaPrincipal(Connection conexion, String nombre) {
     this.conexionBD = conexion;
     this.nombreCajero = nombre;
@@ -26,6 +46,7 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     setLocationRelativeTo(null);
     setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 }
+
     private void ajustarBotones() {
     
     ImageIcon originalIconCaja = new ImageIcon(getClass().getResource("/imagenes/CajaAbierta.png"));
@@ -137,6 +158,8 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         VentaRopa = new javax.swing.JPanel();
         jLabel1 = new javax.swing.JLabel();
         jTextField3 = new javax.swing.JTextField();
+        jLabel4 = new javax.swing.JLabel();
+        lblPresupuestoBase = new javax.swing.JLabel();
         Minipanel = new javax.swing.JPanel();
         PanelCentral = new javax.swing.JPanel();
         jScrollPane1 = new javax.swing.JScrollPane();
@@ -263,6 +286,17 @@ public class VentanaPrincipal extends javax.swing.JFrame {
             .addComponent(jLabel1, javax.swing.GroupLayout.DEFAULT_SIZE, 22, Short.MAX_VALUE)
         );
 
+        jTextField3.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jTextField3ActionPerformed(evt);
+            }
+        });
+
+        jLabel4.setFont(new java.awt.Font("Arial", 1, 24)); // NOI18N
+        jLabel4.setText("BASE:");
+
+        lblPresupuestoBase.setFont(new java.awt.Font("Arial", 0, 24)); // NOI18N
+
         javax.swing.GroupLayout PanelSuperiorLayout = new javax.swing.GroupLayout(PanelSuperior);
         PanelSuperior.setLayout(PanelSuperiorLayout);
         PanelSuperiorLayout.setHorizontalGroup(
@@ -271,31 +305,36 @@ public class VentanaPrincipal extends javax.swing.JFrame {
                 .addContainerGap()
                 .addGroup(PanelSuperiorLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(PanelSuperiorLayout.createSequentialGroup()
-                        .addGap(6, 6, 6)
                         .addGroup(PanelSuperiorLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addGroup(PanelSuperiorLayout.createSequentialGroup()
-                                .addComponent(CodigoProducto)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, 131, javax.swing.GroupLayout.PREFERRED_SIZE))
-                            .addGroup(PanelSuperiorLayout.createSequentialGroup()
-                                .addGap(12, 12, 12)
+                                .addGap(18, 18, 18)
                                 .addComponent(jButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 89, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addGap(18, 18, 18)
-                                .addComponent(jButton3, javax.swing.GroupLayout.PREFERRED_SIZE, 93, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                                .addComponent(jButton3, javax.swing.GroupLayout.PREFERRED_SIZE, 93, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addGroup(PanelSuperiorLayout.createSequentialGroup()
+                                .addGap(12, 12, 12)
+                                .addComponent(CodigoProducto)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, 131, javax.swing.GroupLayout.PREFERRED_SIZE)))
                         .addGroup(PanelSuperiorLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addGroup(PanelSuperiorLayout.createSequentialGroup()
-                                .addGap(60, 60, 60)
+                                .addGap(58, 58, 58)
                                 .addComponent(Cantidad)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(jTextField3, javax.swing.GroupLayout.PREFERRED_SIZE, 80, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addComponent(jTextField3, javax.swing.GroupLayout.PREFERRED_SIZE, 80, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGap(310, 310, 310)
+                                .addComponent(jLabel4)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                .addComponent(lblPresupuestoBase, javax.swing.GroupLayout.PREFERRED_SIZE, 111, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                             .addGroup(PanelSuperiorLayout.createSequentialGroup()
-                                .addGap(2, 2, 2)
+                                .addGap(0, 0, 0)
                                 .addComponent(jButton4, javax.swing.GroupLayout.PREFERRED_SIZE, 122, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addGap(18, 18, 18)
                                 .addComponent(jButton5, javax.swing.GroupLayout.PREFERRED_SIZE, 89, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addGap(18, 18, 18)
                                 .addComponent(jButton6, javax.swing.GroupLayout.PREFERRED_SIZE, 84, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 552, Short.MAX_VALUE)
                                 .addComponent(jButton8, javax.swing.GroupLayout.PREFERRED_SIZE, 84, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addContainerGap())))
                     .addGroup(PanelSuperiorLayout.createSequentialGroup()
@@ -317,18 +356,25 @@ public class VentanaPrincipal extends javax.swing.JFrame {
                         .addComponent(jButton6)
                         .addComponent(jButton8)
                         .addComponent(jButton5)))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(VentaRopa, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(PanelSuperiorLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(CodigoProducto)
-                    .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(Cantidad)
-                    .addComponent(jTextField3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addComponent(VentaRopa, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGroup(PanelSuperiorLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(PanelSuperiorLayout.createSequentialGroup()
+                        .addGap(9, 9, 9)
+                        .addGroup(PanelSuperiorLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                            .addComponent(jTextField3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(Cantidad)
+                            .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(CodigoProducto)))
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, PanelSuperiorLayout.createSequentialGroup()
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 8, Short.MAX_VALUE)
+                        .addGroup(PanelSuperiorLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jLabel4, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(lblPresupuestoBase, javax.swing.GroupLayout.PREFERRED_SIZE, 26, javax.swing.GroupLayout.PREFERRED_SIZE))))
+                .addContainerGap())
         );
 
-        jPanel1.add(PanelSuperior, new org.netbeans.lib.awtextra.AbsoluteConstraints(8, 2, 1225, -1));
+        jPanel1.add(PanelSuperior, new org.netbeans.lib.awtextra.AbsoluteConstraints(8, 2, 1225, 140));
 
         Minipanel.setBackground(new java.awt.Color(0, 0, 51));
         Minipanel.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 0, 0)));
@@ -597,6 +643,10 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         jButton13.doClick(); }
     }//GEN-LAST:event_jButton13KeyPressed
 
+    private void jTextField3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField3ActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_jTextField3ActionPerformed
+
     public static void main(String args[]) {
 
         java.awt.EventQueue.invokeLater(new Runnable() {
@@ -632,11 +682,13 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
+    private javax.swing.JLabel jLabel4;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JTextField jTextField1;
     private javax.swing.JTextField jTextField3;
     private javax.swing.JLabel lblCajeroEnTurno;
+    private javax.swing.JLabel lblPresupuestoBase;
     // End of variables declaration//GEN-END:variables
 }

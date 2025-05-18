@@ -92,7 +92,7 @@
                       <Group type="103" groupAlignment="0" attributes="0">
                           <Group type="102" attributes="0">
                               <EmptySpace min="-2" pref="198" max="-2" attributes="0"/>
-                              <Component id="Boton_Ingresar" min="-2" max="-2" attributes="0"/>
+                              <Component id="btnIngresarPresupuesto" min="-2" max="-2" attributes="0"/>
                           </Group>
                           <Group type="102" alignment="0" attributes="0">
                               <EmptySpace min="-2" pref="42" max="-2" attributes="0"/>
@@ -114,14 +114,14 @@
                       <EmptySpace type="separate" max="-2" attributes="0"/>
                       <Component id="Panel3Base" max="32767" attributes="0"/>
                       <EmptySpace type="separate" max="-2" attributes="0"/>
-                      <Component id="Boton_Ingresar" min="-2" max="-2" attributes="0"/>
+                      <Component id="btnIngresarPresupuesto" min="-2" max="-2" attributes="0"/>
                       <EmptySpace min="-2" pref="39" max="-2" attributes="0"/>
                   </Group>
               </Group>
             </DimensionLayout>
           </Layout>
           <SubComponents>
-            <Component class="javax.swing.JButton" name="Boton_Ingresar">
+            <Component class="javax.swing.JButton" name="btnIngresarPresupuesto">
               <Properties>
                 <Property name="background" type="java.awt.Color" editor="org.netbeans.beaninfo.editors.ColorEditor">
                   <Color blue="ff" green="99" red="33" type="rgb"/>
@@ -132,7 +132,7 @@
                 <Property name="text" type="java.lang.String" value="Ingresar"/>
               </Properties>
               <Events>
-                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="Boton_IngresarActionPerformed"/>
+                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="btnIngresarPresupuestoActionPerformed"/>
               </Events>
             </Component>
             <Component class="javax.swing.JLabel" name="Info">
@@ -162,7 +162,7 @@
                           <EmptySpace min="-2" pref="16" max="-2" attributes="0"/>
                           <Component id="Valor_info" min="-2" max="-2" attributes="0"/>
                           <EmptySpace type="separate" max="-2" attributes="0"/>
-                          <Component id="Valor_Ingresar" min="-2" pref="211" max="-2" attributes="0"/>
+                          <Component id="txtPresupuestoInicial" min="-2" pref="211" max="-2" attributes="0"/>
                           <EmptySpace pref="84" max="32767" attributes="0"/>
                       </Group>
                   </Group>
@@ -173,7 +173,7 @@
                           <EmptySpace min="-2" pref="64" max="-2" attributes="0"/>
                           <Group type="103" groupAlignment="3" attributes="0">
                               <Component id="Valor_info" alignment="3" min="-2" max="-2" attributes="0"/>
-                              <Component id="Valor_Ingresar" alignment="3" min="-2" pref="41" max="-2" attributes="0"/>
+                              <Component id="txtPresupuestoInicial" alignment="3" min="-2" pref="41" max="-2" attributes="0"/>
                           </Group>
                           <EmptySpace pref="49" max="32767" attributes="0"/>
                       </Group>
@@ -189,7 +189,7 @@
                     <Property name="text" type="java.lang.String" value="VALOR :"/>
                   </Properties>
                 </Component>
-                <Component class="javax.swing.JTextField" name="Valor_Ingresar">
+                <Component class="javax.swing.JTextField" name="txtPresupuestoInicial">
                   <Properties>
                     <Property name="background" type="java.awt.Color" editor="org.netbeans.beaninfo.editors.ColorEditor">
                       <Color blue="ff" green="ff" red="cc" type="rgb"/>
@@ -205,8 +205,8 @@
                     </Property>
                   </Properties>
                   <Events>
-                    <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="Valor_IngresarActionPerformed"/>
-                    <EventHandler event="keyTyped" listener="java.awt.event.KeyListener" parameters="java.awt.event.KeyEvent" handler="Valor_IngresarKeyTyped"/>
+                    <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="txtPresupuestoInicialActionPerformed"/>
+                    <EventHandler event="keyTyped" listener="java.awt.event.KeyListener" parameters="java.awt.event.KeyEvent" handler="txtPresupuestoInicialKeyTyped"/>
                   </Events>
                 </Component>
               </SubComponents>

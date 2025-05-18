@@ -8,7 +8,7 @@ public class Conexion {
 
     private static final String url = "jdbc:mysql://localhost:3306/icaro";
     private static final String usuario = "root";
-    private static final String pass = "18129026";
+    private static final String pass = "root";
     private static Connection conexion = null;
 
     public static Connection conectar() {

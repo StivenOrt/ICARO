@@ -1,8 +1,6 @@
 package Ventanas;
 
 import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
 import Conexiones.Conexion;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -13,7 +11,7 @@ import javax.swing.JOptionPane;
 
 public class Window extends javax.swing.JFrame {
 
-    
+
     public Window() {
         initComponents();
         setLocationRelativeTo(null);
@@ -159,45 +157,50 @@ public class Window extends javax.swing.JFrame {
         pack();
     }// </editor-fold>//GEN-END:initComponents
     
-     private Connection conexionBD;
+    private Connection conexionBD;
     
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
 
         Connection conexion = Conexion.conectar();
-        conexionBD = conexion;
-        String usuario = campo_usuario.getText();
-        String contraseña = new String(campo_pass.getPassword());
-        PreparedStatement consulta = null;
-        ResultSet resultado;
-        
+    conexionBD = conexion;
+    String usuario = campo_usuario.getText();
+    String contraseña = new String(campo_pass.getPassword());
+    PreparedStatement consulta = null;
+    ResultSet resultado;
 
-        int control = 0;
-        try {
-            String sql = "SELECT * FROM usuario WHERE Nombre = ? AND Contraseña = ?";
-            consulta = conexion.prepareStatement(sql);
-            consulta.setString(1, usuario);
-            consulta.setString(2, contraseña);
-            resultado = consulta.executeQuery();
+    int control = 0;
+    try {
+        String sql = "SELECT * FROM usuario WHERE Nombre = ? AND Contraseña = ?";
+        consulta = conexion.prepareStatement(sql);
+        consulta.setString(1, usuario);
+        consulta.setString(2, contraseña);
+        resultado = consulta.executeQuery();
 
         if (resultado.next()) {
-                String rolUsuario = resultado.getString("rol");
-                int idUsuarioLogueado = resultado.getInt("idusuario");
-                String nombreCajero = resultado.getString("Nombre");
+            
+            System.out.println("Inicio de sesión exitoso para: " + usuario);
 
-        if ("Administrador".equals(rolUsuario)) {
+            String rolUsuario = resultado.getString("rol");
+            int idUsuarioLogueado = resultado.getInt("idusuario");
+            String nombreCajero = resultado.getString("Nombre");
+
+            if ("Administrador".equals(rolUsuario)) {
                 VentanaPrincipal ventanaPrincipal = new VentanaPrincipal(conexionBD, nombreCajero); // ¡Pasa la conexión y el nombre!
                 ventanaPrincipal.setVisible(true);
-    } else if ("Cajero".equals(rolUsuario)) {
-            VentanaPrincipal ventanaPrincipal = new VentanaPrincipal(conexionBD, nombreCajero); // ¡Pasa la conexión y el nombre!
-            ventanaPrincipal.setVisible(true);
-    }
-    dispose();
-} else {
-    JOptionPane.showMessageDialog(null, "Usuario o contraseña incorrectos.");
-}    
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(null, "Error al iniciar sesión.");
+            }else if ("Cajero".equals(rolUsuario)) {
+                VentanaPrincipal ventanaPrincipal = new VentanaPrincipal(conexionBD, nombreCajero);
+                ventanaPrincipal.setVisible(true);
+                WindowBase windowBase = new WindowBase(ventanaPrincipal, conexionBD, nombreCajero); // ¡Pasa los tres argumentos!
+                windowBase.setVisible(true);
         }
+            dispose();
+        } else {
+            JOptionPane.showMessageDialog(null, "Usuario o contraseña incorrectos.");
+        }
+    } catch (Exception e) {
+        e.printStackTrace();
+        JOptionPane.showMessageDialog(null, "Error al iniciar sesión.");
+    }
     }//GEN-LAST:event_jButton1ActionPerformed
 
     private void campo_usuarioActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_campo_usuarioActionPerformed
@@ -205,7 +208,7 @@ public class Window extends javax.swing.JFrame {
     }//GEN-LAST:event_campo_usuarioActionPerformed
 
     
-    public static void main(String args[]) {
+     public static void main(String args[]) {
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
                 new Window().setVisible(true);
