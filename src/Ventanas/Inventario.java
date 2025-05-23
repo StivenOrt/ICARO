@@ -1,14 +1,219 @@
 package Ventanas;
 
-import javax.swing.JFrame;
+import Conexiones.Conexion; // Importa tu clase de conexión
+import javax.swing.*;
+import javax.swing.table.DefaultTableModel; // Necesario para manejar el modelo de la tabla
+import javax.swing.table.TableRowSorter; // Necesario para ordenar y filtrar la tabla
+import java.sql.Connection; // Importación necesaria para trabajar con la BD
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.List; // Importación para List
+import javax.swing.RowSorter; // Importación para RowSorter y SortKey
+import javax.swing.SortOrder; // Importación para SortOrder
 
 public class Inventario extends javax.swing.JFrame {
+    
+    private DefaultTableModel modeloTablaInventario;
+    private TableRowSorter<DefaultTableModel> sorter;
+    private Connection conexionBD; // Asegúrate de que exista
 
     public Inventario() {
-        initComponents();
+        initComponents(); // Método generado por NetBeans para inicializar los componentes visuales
+        setupTable(); // Configura el modelo de la tabla y el sorter
+        cargarInventario(); // Carga los datos iniciales de los productos
+        calcularTotales(); // Calcula y muestra los totales de inversión y venta.
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE); 
+        pack();
         setLocationRelativeTo(null);
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
     }
+    
+    private void setupTable() {
+        modeloTablaInventario = (DefaultTableModel) tablaInventario.getModel();
+        modeloTablaInventario.setColumnCount(0);
+        modeloTablaInventario.addColumn("Código"); // IdProducto
+        modeloTablaInventario.addColumn("Nombre");
+        modeloTablaInventario.addColumn("Precio de ventas"); // Precio
+        modeloTablaInventario.addColumn("Cantidad"); // Stock
+        modeloTablaInventario.addColumn("Marca");
+        modeloTablaInventario.addColumn("Descuento"); // Si tienes un campo de descuento en producto
+        modeloTablaInventario.addColumn("Descripción");
+
+        // Configuramos el sorter con el modelo que acabamos de obtener/configurar.
+        sorter = new TableRowSorter<>(modeloTablaInventario);
+        tablaInventario.setRowSorter(sorter);
+    }
+    
+    public void cargarInventario() {
+        modeloTablaInventario.setRowCount(0); 
+
+        Connection currentConnection = Conexion.conectar(); 
+        if (currentConnection == null) {
+            JOptionPane.showMessageDialog(this, "No hay conexión a la base de datos. No se puede cargar el inventario.", "Error de Conexión", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        PreparedStatement consulta = null;
+        ResultSet resultado = null;
+
+        try {
+            String sql = "SELECT IdProducto, Nombre, Precio, Stock, Marca, Descripcion FROM producto ORDER BY IdProducto"; 
+            consulta = currentConnection.prepareStatement(sql);
+            resultado = consulta.executeQuery();
+
+            while (resultado.next()) {
+                Object[] fila = {
+                    resultado.getString("IdProducto"),
+                    resultado.getString("Nombre"),
+                    resultado.getDouble("Precio"), 
+                    resultado.getInt("Stock"), 
+                    resultado.getString("Marca"),
+                    0.0, 
+                    resultado.getString("Descripcion")
+                };
+                modeloTablaInventario.addRow(fila); 
+            }
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Error al cargar el inventario: " + e.getMessage(), "Error de SQL", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
+        } finally {
+            try {
+                if (resultado != null) resultado.close();
+                if (consulta != null) consulta.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+            calcularTotales(); 
+        }
+    }
+    
+    private void modificarProducto() {
+        int filaSeleccionada = tablaInventario.getSelectedRow();
+        if (filaSeleccionada == -1) {
+            JOptionPane.showMessageDialog(this, "Selecciona un producto para modificar.", "Advertencia", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        String idProducto = modeloTablaInventario.getValueAt(filaSeleccionada, 0).toString(); 
+        JOptionPane.showMessageDialog(this, "Abriendo ventana para modificar producto con ID: " + idProducto, "Modificar", JOptionPane.INFORMATION_MESSAGE);
+    }
+    
+    private void eliminarProducto() {
+        int filaSeleccionada = tablaInventario.getSelectedRow();
+        if (filaSeleccionada == -1) {
+            JOptionPane.showMessageDialog(this, "Selecciona un producto para eliminar.", "Advertencia", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        String idProducto = modeloTablaInventario.getValueAt(filaSeleccionada, 0).toString(); 
+
+        int confirmacion = JOptionPane.showConfirmDialog(this, "¿Estás seguro de eliminar el producto con Código: " + idProducto + "?", "Confirmar Eliminación", JOptionPane.YES_NO_OPTION);
+
+        if (confirmacion == JOptionPane.YES_OPTION) {
+            Connection currentConnection = Conexion.conectar();
+            if (currentConnection == null) {
+                JOptionPane.showMessageDialog(this, "No hay conexión a la base de datos para eliminar el producto.", "Error de Conexión", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            String sql = "DELETE FROM producto WHERE IdProducto = ?";
+            PreparedStatement pstmt = null;
+
+            try {
+                pstmt = currentConnection.prepareStatement(sql);
+                pstmt.setString(1, idProducto);
+
+                int filasAfectadas = pstmt.executeUpdate();
+
+                if (filasAfectadas > 0) {
+                    JOptionPane.showMessageDialog(this, "Producto eliminado exitosamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                    cargarInventario(); 
+                } else {
+                    JOptionPane.showMessageDialog(this, "No se pudo eliminar el producto. Puede que el ID no exista o haya dependencias.", "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            } catch (SQLException ex) {
+                JOptionPane.showMessageDialog(this, "Error al eliminar el producto: " + ex.getMessage(), "Error de SQL", JOptionPane.ERROR_MESSAGE);
+                ex.printStackTrace();
+            } finally {
+                try {
+                    if (pstmt != null) pstmt.close();
+                } catch (SQLException ex) {
+                    ex.printStackTrace();
+                }
+            }
+        }
+    }
+    
+    private void agregarMercancia() {
+        JOptionPane.showMessageDialog(this, "Funcionalidad para 'Agregar mercancía' se manejará en FacturaInventario.", "Información", JOptionPane.INFORMATION_MESSAGE);
+    }
+    
+    private void ordenarInventario(String tipoOrden) {
+        int columnaCantidad = 3; 
+
+        if (tipoOrden.equals("MayorExistencias")) {
+            sorter.setSortKeys(List.of(new RowSorter.SortKey(columnaCantidad, SortOrder.DESCENDING)));
+        } else if (tipoOrden.equals("MenorExistencias")) {
+            sorter.setSortKeys(List.of(new RowSorter.SortKey(columnaCantidad, SortOrder.ASCENDING)));
+        }
+        sorter.sort(); 
+    }
+    
+    private void calcularTotales() {
+        double totalInversion = 0.0;
+        double totalVenta = 0.0;
+
+        Connection currentConnection = Conexion.conectar(); // Obtiene la conexión
+        if (currentConnection == null) {
+            JOptionPane.showMessageDialog(this, "No hay conexión a la base de datos para calcular totales.", "Error de Conexión", JOptionPane.ERROR_MESSAGE);
+            txtDineroTotalInversion.setText("N/A"); // Actualiza tu txtDineroTotalInversion
+            txtDineroTotalVenta.setText("N/A"); // Actualiza tu txtDineroTotalVenta
+            return;
+        }
+
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+
+        try {
+            // ¡IMPORTANTE! La query ahora selecciona Precio y PrecioCompra
+            String sql = "SELECT Precio, PrecioCompra, Stock FROM producto"; 
+            pstmt = currentConnection.prepareStatement(sql);
+            rs = pstmt.executeQuery();
+
+            while (rs.next()) {
+                double precioVenta = rs.getDouble("Precio");
+                double precioCompra = rs.getDouble("PrecioCompra"); // Obtiene el precio de compra
+                int stock = rs.getInt("Stock");
+
+                totalVenta += (precioVenta * stock);
+                totalInversion += (precioCompra * stock); // Calcula la inversión con PrecioCompra
+            }
+
+        } catch (SQLException e) {
+            System.err.println("Error al calcular totales de inventario: " + e.getMessage());
+            totalInversion = 0.0;
+            totalVenta = 0.0;
+            // Asegúrate de que los JTextFields reflejen un error o cero si hay un problema
+            txtDineroTotalInversion.setText("Error");
+            txtDineroTotalVenta.setText("Error");
+        } finally {
+            try {
+                if (rs != null) rs.close();
+                if (pstmt != null) pstmt.close();
+                // Si tu `Conexion.conectar()` abre una nueva conexión cada vez, deberías cerrarla aquí.
+                // Si `Conexion.conectar()` gestiona una conexión singleton, no la cierres aquí.
+                // Conexion.cerrarConexion(); // Descomentar si cada operación gestiona su propia conexión.
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+
+        // Formatear los valores a moneda y mostrarlos en los JTextFields
+        txtDineroTotalInversion.setText(String.format("%,.2f", totalInversion)); 
+        txtDineroTotalVenta.setText(String.format("%,.2f", totalVenta)); 
+    }
+
+    
 
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
@@ -17,26 +222,26 @@ public class Inventario extends javax.swing.JFrame {
         jPanel1 = new javax.swing.JPanel();
         jLabel1 = new javax.swing.JLabel();
         jPanel2 = new javax.swing.JPanel();
-        jTextField1 = new javax.swing.JTextField();
+        txtBuscar = new javax.swing.JTextField();
         jLabel2 = new javax.swing.JLabel();
         jScrollPane1 = new javax.swing.JScrollPane();
-        jTable1 = new javax.swing.JTable();
+        tablaInventario = new javax.swing.JTable();
         jPanel3 = new javax.swing.JPanel();
-        jButton1 = new javax.swing.JButton();
+        btnActualizarTabla = new javax.swing.JButton();
         jPanel4 = new javax.swing.JPanel();
-        jButton2 = new javax.swing.JButton();
-        jButton3 = new javax.swing.JButton();
-        jButton4 = new javax.swing.JButton();
-        jButton5 = new javax.swing.JButton();
+        btnAgregarProducto = new javax.swing.JButton();
+        btnModificarProducto = new javax.swing.JButton();
+        btnEliminarProducto = new javax.swing.JButton();
+        btnAgregarMercancia = new javax.swing.JButton();
         jScrollBar1 = new javax.swing.JScrollBar();
         jPanel5 = new javax.swing.JPanel();
-        jButton6 = new javax.swing.JButton();
-        jButton7 = new javax.swing.JButton();
-        jButton8 = new javax.swing.JButton();
+        btnOrdenarMayorExistencias = new javax.swing.JButton();
+        btnOrdenarMenorExistencias = new javax.swing.JButton();
+        btnGenerarReporte = new javax.swing.JButton();
         jLabel3 = new javax.swing.JLabel();
         jLabel4 = new javax.swing.JLabel();
-        jTextField2 = new javax.swing.JTextField();
-        jTextField3 = new javax.swing.JTextField();
+        txtDineroTotalInversion = new javax.swing.JTextField();
+        txtDineroTotalVenta = new javax.swing.JTextField();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setBackground(new java.awt.Color(255, 255, 255));
@@ -48,10 +253,10 @@ public class Inventario extends javax.swing.JFrame {
 
         jPanel2.setBackground(new java.awt.Color(0, 0, 102));
 
-        jTextField1.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 255, 255), 2));
-        jTextField1.addActionListener(new java.awt.event.ActionListener() {
+        txtBuscar.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 255, 255), 2));
+        txtBuscar.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jTextField1ActionPerformed(evt);
+                txtBuscarActionPerformed(evt);
             }
         });
 
@@ -67,7 +272,7 @@ public class Inventario extends javax.swing.JFrame {
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addComponent(jLabel2)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, 188, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(txtBuscar, javax.swing.GroupLayout.PREFERRED_SIZE, 188, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(298, 298, 298))
         );
         jPanel2Layout.setVerticalGroup(
@@ -75,12 +280,12 @@ public class Inventario extends javax.swing.JFrame {
             .addGroup(jPanel2Layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(txtBuscar, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jLabel2))
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
-        jTable1.setModel(new javax.swing.table.DefaultTableModel(
+        tablaInventario.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
                 {null, null, null, null, null, null, null},
                 {null, null, null, null, null, null, null},
@@ -91,18 +296,18 @@ public class Inventario extends javax.swing.JFrame {
                 "Código", "Nombre", "Precio de ventas", "Cantidad", "Marca", "Descuento", "Descripción"
             }
         ));
-        jScrollPane1.setViewportView(jTable1);
+        jScrollPane1.setViewportView(tablaInventario);
 
         jPanel3.setBackground(new java.awt.Color(0, 0, 102));
 
-        jButton1.setBackground(new java.awt.Color(0, 0, 102));
-        jButton1.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
-        jButton1.setForeground(new java.awt.Color(255, 255, 255));
-        jButton1.setText("Actualizar tabla");
-        jButton1.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(255, 255, 255), 2));
-        jButton1.addActionListener(new java.awt.event.ActionListener() {
+        btnActualizarTabla.setBackground(new java.awt.Color(0, 0, 102));
+        btnActualizarTabla.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
+        btnActualizarTabla.setForeground(new java.awt.Color(255, 255, 255));
+        btnActualizarTabla.setText("Actualizar tabla");
+        btnActualizarTabla.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(255, 255, 255), 2));
+        btnActualizarTabla.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton1ActionPerformed(evt);
+                btnActualizarTablaActionPerformed(evt);
             }
         });
 
@@ -112,47 +317,52 @@ public class Inventario extends javax.swing.JFrame {
             jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel3Layout.createSequentialGroup()
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 197, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(btnActualizarTabla, javax.swing.GroupLayout.PREFERRED_SIZE, 197, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(309, 309, 309))
         );
         jPanel3Layout.setVerticalGroup(
             jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel3Layout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 23, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(btnActualizarTabla, javax.swing.GroupLayout.PREFERRED_SIZE, 23, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
         jPanel4.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 0, 0)));
 
-        jButton2.setBackground(new java.awt.Color(0, 0, 51));
-        jButton2.setForeground(new java.awt.Color(255, 255, 255));
-        jButton2.setText("Agregar un producto");
-        jButton2.addActionListener(new java.awt.event.ActionListener() {
+        btnAgregarProducto.setBackground(new java.awt.Color(0, 0, 51));
+        btnAgregarProducto.setForeground(new java.awt.Color(255, 255, 255));
+        btnAgregarProducto.setText("Agregar un producto");
+        btnAgregarProducto.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton2ActionPerformed(evt);
+                btnAgregarProductoActionPerformed(evt);
             }
         });
 
-        jButton3.setBackground(new java.awt.Color(0, 0, 51));
-        jButton3.setForeground(new java.awt.Color(255, 255, 255));
-        jButton3.setText("Modificar un producto");
-        jButton3.addActionListener(new java.awt.event.ActionListener() {
+        btnModificarProducto.setBackground(new java.awt.Color(0, 0, 51));
+        btnModificarProducto.setForeground(new java.awt.Color(255, 255, 255));
+        btnModificarProducto.setText("Modificar un producto");
+        btnModificarProducto.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton3ActionPerformed(evt);
+                btnModificarProductoActionPerformed(evt);
             }
         });
 
-        jButton4.setBackground(new java.awt.Color(0, 0, 51));
-        jButton4.setForeground(new java.awt.Color(255, 255, 255));
-        jButton4.setText("Eliminar un producto");
-
-        jButton5.setBackground(new java.awt.Color(0, 0, 51));
-        jButton5.setForeground(new java.awt.Color(255, 255, 255));
-        jButton5.setText("Agregar mercancía");
-        jButton5.addActionListener(new java.awt.event.ActionListener() {
+        btnEliminarProducto.setBackground(new java.awt.Color(0, 0, 51));
+        btnEliminarProducto.setForeground(new java.awt.Color(255, 255, 255));
+        btnEliminarProducto.setText("Eliminar un producto");
+        btnEliminarProducto.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton5ActionPerformed(evt);
+                btnEliminarProductoActionPerformed(evt);
+            }
+        });
+
+        btnAgregarMercancia.setBackground(new java.awt.Color(0, 0, 51));
+        btnAgregarMercancia.setForeground(new java.awt.Color(255, 255, 255));
+        btnAgregarMercancia.setText("Agregar mercancía");
+        btnAgregarMercancia.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnAgregarMercanciaActionPerformed(evt);
             }
         });
 
@@ -162,13 +372,13 @@ public class Inventario extends javax.swing.JFrame {
             jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel4Layout.createSequentialGroup()
                 .addContainerGap(19, Short.MAX_VALUE)
-                .addComponent(jButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 188, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(btnAgregarProducto, javax.swing.GroupLayout.PREFERRED_SIZE, 188, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(jButton3, javax.swing.GroupLayout.PREFERRED_SIZE, 203, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(btnModificarProducto, javax.swing.GroupLayout.PREFERRED_SIZE, 203, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(jButton4, javax.swing.GroupLayout.PREFERRED_SIZE, 188, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(btnEliminarProducto, javax.swing.GroupLayout.PREFERRED_SIZE, 188, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(jButton5, javax.swing.GroupLayout.PREFERRED_SIZE, 177, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(btnAgregarMercancia, javax.swing.GroupLayout.PREFERRED_SIZE, 177, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(26, 26, 26))
         );
         jPanel4Layout.setVerticalGroup(
@@ -176,35 +386,45 @@ public class Inventario extends javax.swing.JFrame {
             .addGroup(jPanel4Layout.createSequentialGroup()
                 .addGap(23, 23, 23)
                 .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jButton2)
-                    .addComponent(jButton3)
-                    .addComponent(jButton4)
-                    .addComponent(jButton5))
+                    .addComponent(btnAgregarProducto)
+                    .addComponent(btnModificarProducto)
+                    .addComponent(btnEliminarProducto)
+                    .addComponent(btnAgregarMercancia))
                 .addContainerGap(22, Short.MAX_VALUE))
         );
 
         jPanel5.setBackground(new java.awt.Color(0, 0, 51));
 
-        jButton6.setBackground(new java.awt.Color(0, 0, 51));
-        jButton6.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
-        jButton6.setForeground(new java.awt.Color(255, 255, 255));
-        jButton6.setText("Ordenar mayor existencias");
-        jButton6.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(255, 255, 255), 3));
-
-        jButton7.setBackground(new java.awt.Color(0, 0, 51));
-        jButton7.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
-        jButton7.setForeground(new java.awt.Color(255, 255, 255));
-        jButton7.setText("Ordenar menor existencias");
-        jButton7.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(255, 255, 255), 3));
-
-        jButton8.setBackground(new java.awt.Color(0, 0, 51));
-        jButton8.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
-        jButton8.setForeground(new java.awt.Color(255, 255, 255));
-        jButton8.setText("Generar reporte de inventario");
-        jButton8.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(255, 255, 255), 3));
-        jButton8.addActionListener(new java.awt.event.ActionListener() {
+        btnOrdenarMayorExistencias.setBackground(new java.awt.Color(0, 0, 51));
+        btnOrdenarMayorExistencias.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
+        btnOrdenarMayorExistencias.setForeground(new java.awt.Color(255, 255, 255));
+        btnOrdenarMayorExistencias.setText("Ordenar mayor existencias");
+        btnOrdenarMayorExistencias.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(255, 255, 255), 3));
+        btnOrdenarMayorExistencias.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton8ActionPerformed(evt);
+                btnOrdenarMayorExistenciasActionPerformed(evt);
+            }
+        });
+
+        btnOrdenarMenorExistencias.setBackground(new java.awt.Color(0, 0, 51));
+        btnOrdenarMenorExistencias.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
+        btnOrdenarMenorExistencias.setForeground(new java.awt.Color(255, 255, 255));
+        btnOrdenarMenorExistencias.setText("Ordenar menor existencias");
+        btnOrdenarMenorExistencias.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(255, 255, 255), 3));
+        btnOrdenarMenorExistencias.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnOrdenarMenorExistenciasActionPerformed(evt);
+            }
+        });
+
+        btnGenerarReporte.setBackground(new java.awt.Color(0, 0, 51));
+        btnGenerarReporte.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        btnGenerarReporte.setForeground(new java.awt.Color(255, 255, 255));
+        btnGenerarReporte.setText("Generar reporte de inventario");
+        btnGenerarReporte.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(255, 255, 255), 3));
+        btnGenerarReporte.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnGenerarReporteActionPerformed(evt);
             }
         });
 
@@ -216,9 +436,9 @@ public class Inventario extends javax.swing.JFrame {
         jLabel4.setForeground(new java.awt.Color(255, 255, 255));
         jLabel4.setText("Dinero total en inventario (a la venta):");
 
-        jTextField2.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 255, 255), 2));
+        txtDineroTotalInversion.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 255, 255), 2));
 
-        jTextField3.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 255, 255), 2));
+        txtDineroTotalVenta.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 255, 255), 2));
 
         javax.swing.GroupLayout jPanel5Layout = new javax.swing.GroupLayout(jPanel5);
         jPanel5.setLayout(jPanel5Layout);
@@ -227,21 +447,21 @@ public class Inventario extends javax.swing.JFrame {
             .addGroup(jPanel5Layout.createSequentialGroup()
                 .addGap(25, 25, 25)
                 .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(jButton8, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(btnGenerarReporte, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addGroup(jPanel5Layout.createSequentialGroup()
-                        .addComponent(jButton6, javax.swing.GroupLayout.PREFERRED_SIZE, 163, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(btnOrdenarMayorExistencias, javax.swing.GroupLayout.PREFERRED_SIZE, 163, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jButton7, javax.swing.GroupLayout.PREFERRED_SIZE, 170, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                        .addComponent(btnOrdenarMenorExistencias, javax.swing.GroupLayout.PREFERRED_SIZE, 170, javax.swing.GroupLayout.PREFERRED_SIZE)))
                 .addGap(64, 64, 64)
                 .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(jPanel5Layout.createSequentialGroup()
                         .addComponent(jLabel3)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jTextField2))
+                        .addComponent(txtDineroTotalInversion))
                     .addGroup(jPanel5Layout.createSequentialGroup()
                         .addComponent(jLabel4)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jTextField3)))
+                        .addComponent(txtDineroTotalVenta)))
                 .addContainerGap())
         );
         jPanel5Layout.setVerticalGroup(
@@ -249,15 +469,15 @@ public class Inventario extends javax.swing.JFrame {
             .addGroup(jPanel5Layout.createSequentialGroup()
                 .addGap(16, 16, 16)
                 .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jButton6)
-                    .addComponent(jButton7)
+                    .addComponent(btnOrdenarMayorExistencias)
+                    .addComponent(btnOrdenarMenorExistencias)
                     .addComponent(jLabel3)
-                    .addComponent(jTextField2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(txtDineroTotalInversion, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jButton8)
+                    .addComponent(btnGenerarReporte)
                     .addComponent(jLabel4)
-                    .addComponent(jTextField3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(txtDineroTotalVenta, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addContainerGap(15, Short.MAX_VALUE))
         );
 
@@ -265,7 +485,7 @@ public class Inventario extends javax.swing.JFrame {
         jPanel1.setLayout(jPanel1Layout);
         jPanel1Layout.setHorizontalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 857, Short.MAX_VALUE)
+            .addGap(0, 863, Short.MAX_VALUE)
             .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                 .addGroup(jPanel1Layout.createSequentialGroup()
                     .addContainerGap()
@@ -324,29 +544,43 @@ public class Inventario extends javax.swing.JFrame {
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
-    private void jTextField1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField1ActionPerformed
+    private void txtBuscarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txtBuscarActionPerformed
         // TODO add your handling code here:
-    }//GEN-LAST:event_jTextField1ActionPerformed
+    }//GEN-LAST:event_txtBuscarActionPerformed
 
-    private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jButton1ActionPerformed
+    private void btnActualizarTablaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnActualizarTablaActionPerformed
+        cargarInventario();
+    }//GEN-LAST:event_btnActualizarTablaActionPerformed
 
-    private void jButton3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton3ActionPerformed
-        new Modificar().setVisible(true);
-    }//GEN-LAST:event_jButton3ActionPerformed
+    private void btnModificarProductoActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnModificarProductoActionPerformed
+        new Modificar().setVisible(true); // Tu código original
+        modificarProducto();
+    }//GEN-LAST:event_btnModificarProductoActionPerformed
 
-    private void jButton8ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton8ActionPerformed
-        
-    }//GEN-LAST:event_jButton8ActionPerformed
+    private void btnGenerarReporteActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnGenerarReporteActionPerformed
+        GenerarReportes generarReportesFrame = new GenerarReportes();
+        generarReportesFrame.setVisible(true);
+    }//GEN-LAST:event_btnGenerarReporteActionPerformed
 
-    private void jButton5ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton5ActionPerformed
+    private void btnAgregarMercanciaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnAgregarMercanciaActionPerformed
         new FacturaInventario().setVisible(true);
-    }//GEN-LAST:event_jButton5ActionPerformed
+    }//GEN-LAST:event_btnAgregarMercanciaActionPerformed
 
-    private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
+    private void btnAgregarProductoActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnAgregarProductoActionPerformed
         new NuevoProducto().setVisible(true);
-    }//GEN-LAST:event_jButton2ActionPerformed
+    }//GEN-LAST:event_btnAgregarProductoActionPerformed
+
+    private void btnEliminarProductoActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnEliminarProductoActionPerformed
+        eliminarProducto();
+    }//GEN-LAST:event_btnEliminarProductoActionPerformed
+
+    private void btnOrdenarMayorExistenciasActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnOrdenarMayorExistenciasActionPerformed
+        ordenarInventario("MayorExistencias");
+    }//GEN-LAST:event_btnOrdenarMayorExistenciasActionPerformed
+
+    private void btnOrdenarMenorExistenciasActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnOrdenarMenorExistenciasActionPerformed
+        ordenarInventario("MenorExistencias");
+    }//GEN-LAST:event_btnOrdenarMenorExistenciasActionPerformed
 
     public static void main(String args[]) {
 
@@ -358,14 +592,14 @@ public class Inventario extends javax.swing.JFrame {
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JButton jButton1;
-    private javax.swing.JButton jButton2;
-    private javax.swing.JButton jButton3;
-    private javax.swing.JButton jButton4;
-    private javax.swing.JButton jButton5;
-    private javax.swing.JButton jButton6;
-    private javax.swing.JButton jButton7;
-    private javax.swing.JButton jButton8;
+    private javax.swing.JButton btnActualizarTabla;
+    private javax.swing.JButton btnAgregarMercancia;
+    private javax.swing.JButton btnAgregarProducto;
+    private javax.swing.JButton btnEliminarProducto;
+    private javax.swing.JButton btnGenerarReporte;
+    private javax.swing.JButton btnModificarProducto;
+    private javax.swing.JButton btnOrdenarMayorExistencias;
+    private javax.swing.JButton btnOrdenarMenorExistencias;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
@@ -377,9 +611,9 @@ public class Inventario extends javax.swing.JFrame {
     private javax.swing.JPanel jPanel5;
     private javax.swing.JScrollBar jScrollBar1;
     private javax.swing.JScrollPane jScrollPane1;
-    private javax.swing.JTable jTable1;
-    private javax.swing.JTextField jTextField1;
-    private javax.swing.JTextField jTextField2;
-    private javax.swing.JTextField jTextField3;
+    private javax.swing.JTable tablaInventario;
+    private javax.swing.JTextField txtBuscar;
+    private javax.swing.JTextField txtDineroTotalInversion;
+    private javax.swing.JTextField txtDineroTotalVenta;
     // End of variables declaration//GEN-END:variables
 }

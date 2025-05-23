@@ -1,8 +1,6 @@
 package Ventanas;
 
 import javax.swing.JFrame;
-import Ventanas.Interfazcobro;
-import Ventanas.Interfazpagoconfirm;
 
 public class Interfazpagoconfirm extends javax.swing.JFrame {
 

@@ -1,21 +1,25 @@
 package Ventanas;
 
 import Conexiones.Conexion;
-import java.awt.GraphicsEnvironment;
-import java.awt.Rectangle;
 import java.awt.Image;
-import java.awt.*;
-import javax.swing.*;
 import javax.swing.ImageIcon;
 import javax.swing.JFrame;
 import javax.swing.SwingConstants;
 import java.sql.Connection;
-import java.awt.Dimension;
 
 public class VentanaPrincipal extends javax.swing.JFrame {
 
     private Connection conexionBD;
     private String nombreCajero;
+    
+    public void setPresupuestoBase(String presupuesto) {
+
+        if (lblPresupuestoBase != null) {
+        lblPresupuestoBase.setText(presupuesto); // Ajusta el texto para que coincida con tu etiqueta
+    } else {
+        System.err.println("lblPresupuestoBase no está inicializado en VentanaPrincipal.");
+    }
+    }
 
     public VentanaPrincipal(Connection conexion, String nombre) {
         super("Almacén de Ropa");
@@ -324,10 +328,10 @@ public class VentanaPrincipal extends javax.swing.JFrame {
                         .addComponent(Cantidad)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                         .addComponent(jTextField3, javax.swing.GroupLayout.PREFERRED_SIZE, 87, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(382, 382, 382)
-                        .addComponent(lblPresupuestoBase, javax.swing.GroupLayout.PREFERRED_SIZE, 111, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(109, 109, 109)
-                        .addComponent(jLabel4))
+                        .addGap(602, 602, 602)
+                        .addComponent(jLabel4)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(lblPresupuestoBase, javax.swing.GroupLayout.PREFERRED_SIZE, 111, javax.swing.GroupLayout.PREFERRED_SIZE))
                     .addGroup(PanelSuperiorLayout.createSequentialGroup()
                         .addGap(24, 24, 24)
                         .addComponent(jButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 89, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -339,7 +343,7 @@ public class VentanaPrincipal extends javax.swing.JFrame {
                         .addComponent(jButton5, javax.swing.GroupLayout.PREFERRED_SIZE, 89, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(18, 18, 18)
                         .addComponent(jButton6, javax.swing.GroupLayout.PREFERRED_SIZE, 84, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addContainerGap(231, Short.MAX_VALUE))
+                .addContainerGap(668, Short.MAX_VALUE))
         );
         PanelSuperiorLayout.setVerticalGroup(
             PanelSuperiorLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)

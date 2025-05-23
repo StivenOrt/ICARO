@@ -1,15 +1,135 @@
 package Ventanas;
 
 import javax.swing.JFrame;
+import Conexiones.Conexion; // Importa tu clase de conexión
+import javax.swing.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.util.Random; // Necesario para generar códigos aleatorios
 
 public class NuevoProducto extends javax.swing.JFrame {
+    
+    private Inventario inventarioFrame; 
 
     public NuevoProducto() {
         initComponents();
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
     }
+    
+    public NuevoProducto(java.awt.Frame parent, Inventario inventarioFrame) {
+        super(); // Llama al constructor de JFrame
+        this.inventarioFrame = inventarioFrame; // Guarda la referencia de Inventario
+        initComponents(); // Método generado por NetBeans para inicializar los componentes visuales
+        jTextField1.setEditable(false); 
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setLocationRelativeTo(parent); // Centra esta ventana respecto al padre (Inventario)
+    }
 
+    private void generarCodigoProducto() {
+        Random random = new Random();
+        String codigo = String.format("%06d", random.nextInt(1000000)); 
+        jTextField1.setText(codigo);
+    }
+    
+    private void guardarProducto() {
+        String codigo = jTextField1.getText().trim();
+        String nombre = jTextField2.getText().trim();
+        String precioVentaStr = jTextField3.getText().trim();
+        String precioCompraStr = jTextField4.getText().trim();
+        String cantidadStr = jTextField5.getText().trim();
+        String marca = jTextField6.getText().trim();
+        String descuentoStr = jTextField7.getText().trim();
+        String descripcion = jTextField8.getText().trim();
+
+        if (codigo.isEmpty() || nombre.isEmpty() || precioVentaStr.isEmpty() || 
+            precioCompraStr.isEmpty() || cantidadStr.isEmpty() || marca.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Por favor, completa todos los campos obligatorios.", "Campos Incompletos", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        double precioVenta;
+        double precioCompra;
+        int cantidad;
+        double descuento = 0.0; 
+
+        try {
+            precioVenta = Double.parseDouble(precioVentaStr);
+            precioCompra = Double.parseDouble(precioCompraStr);
+            cantidad = Integer.parseInt(cantidadStr);
+            if (!descuentoStr.isEmpty()) {
+                descuento = Double.parseDouble(descuentoStr);
+            }
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "Por favor, introduce valores numéricos válidos para Precio, Cantidad y Descuento.", "Error de Formato", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        Connection currentConnection = Conexion.conectar();
+        if (currentConnection == null) {
+            JOptionPane.showMessageDialog(this, "No hay conexión a la base de datos.", "Error de Conexión", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        PreparedStatement pstmt = null;
+
+        try {
+            // AJUSTA ESTA QUERY para que coincida exactamente con las columnas de tu tabla 'producto' en la BD
+            String sql = "INSERT INTO producto (IdProducto, Nombre, Precio, PrecioCompra, Stock, Marca, Descuento, Descripcion) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+            pstmt = currentConnection.prepareStatement(sql);
+
+            pstmt.setString(1, codigo);
+            pstmt.setString(2, nombre);
+            pstmt.setDouble(3, precioVenta);
+            pstmt.setDouble(4, precioCompra); 
+            pstmt.setInt(5, cantidad);
+            pstmt.setString(6, marca);
+            pstmt.setDouble(7, descuento);    
+            pstmt.setString(8, descripcion);
+
+            int filasAfectadas = pstmt.executeUpdate();
+
+            if (filasAfectadas > 0) {
+                JOptionPane.showMessageDialog(this, "Producto guardado exitosamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                limpiarCampos(); 
+                
+                if (inventarioFrame != null) {
+                    inventarioFrame.cargarInventario(); 
+                }
+                this.dispose(); 
+            } else {
+                JOptionPane.showMessageDialog(this, "No se pudo guardar el producto.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+
+        } catch (SQLException e) {
+            if (e.getSQLState().startsWith("23")) { 
+                 JOptionPane.showMessageDialog(this, "Error: El código de producto '" + codigo + "' ya existe. Genera uno nuevo o modifica el existente.", "Error de Datos", JOptionPane.ERROR_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(this, "Error al guardar el producto: " + e.getMessage(), "Error de SQL", JOptionPane.ERROR_MESSAGE);
+            }
+            e.printStackTrace();
+        } finally {
+            try {
+                if (pstmt != null) pstmt.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    
+
+    private void limpiarCampos() {
+        jTextField1.setText("");
+        jTextField2.setText("");
+        jTextField3.setText("");
+        jTextField4.setText("");
+        jTextField5.setText("");
+        jTextField6.setText("");
+        jTextField7.setText("");
+        jTextField8.setText("");
+    }
+    
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
@@ -50,12 +170,22 @@ public class NuevoProducto extends javax.swing.JFrame {
         jButton1.setForeground(new java.awt.Color(255, 255, 255));
         jButton1.setText("Guardar");
         jButton1.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(255, 255, 255), 3));
+        jButton1.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton1ActionPerformed(evt);
+            }
+        });
 
         jButton2.setBackground(new java.awt.Color(0, 0, 51));
         jButton2.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
         jButton2.setForeground(new java.awt.Color(255, 255, 255));
         jButton2.setText("Generar");
         jButton2.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(255, 255, 255), 2));
+        jButton2.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton2ActionPerformed(evt);
+            }
+        });
 
         jTextField1.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 255, 255), 2));
         jTextField1.addActionListener(new java.awt.event.ActionListener() {
@@ -230,8 +360,16 @@ public class NuevoProducto extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void jTextField1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField1ActionPerformed
-        // TODO add your handling code here:
+        
     }//GEN-LAST:event_jTextField1ActionPerformed
+
+    private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
+        guardarProducto();
+    }//GEN-LAST:event_jButton1ActionPerformed
+
+    private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
+        generarCodigoProducto();
+    }//GEN-LAST:event_jButton2ActionPerformed
 
     public static void main(String args[]) {
 

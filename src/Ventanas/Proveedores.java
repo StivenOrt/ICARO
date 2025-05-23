@@ -1,9 +1,6 @@
 package Ventanas;
 
-import Ventanas.AgregarProveedor;
-import Ventanas.ModificarProveedor;
 import javax.swing.JFrame;
-import javax.swing.JTable;
 import javax.swing.table.DefaultTableModel;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
