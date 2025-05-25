@@ -1,16 +1,19 @@
 package Ventanas;
 
-import Conexiones.Conexion; // Importa tu clase de conexión
+import Conexiones.Conexion;
 import javax.swing.*;
-import javax.swing.table.DefaultTableModel; // Necesario para manejar el modelo de la tabla
-import javax.swing.table.TableRowSorter; // Necesario para ordenar y filtrar la tabla
-import java.sql.Connection; // Importación necesaria para trabajar con la BD
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableRowSorter;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.List; // Importación para List
-import javax.swing.RowSorter; // Importación para RowSorter y SortKey
-import javax.swing.SortOrder; // Importación para SortOrder
+import java.util.List;
+import javax.swing.RowSorter;
+import javax.swing.SortOrder;
+import java.util.regex.PatternSyntaxException;
 
 public class Inventario extends javax.swing.JFrame {
     
@@ -19,13 +22,125 @@ public class Inventario extends javax.swing.JFrame {
     private Connection conexionBD; // Asegúrate de que exista
 
     public Inventario() {
-        initComponents(); // Método generado por NetBeans para inicializar los componentes visuales
+        initComponents();
+        inicializarTabla();
         setupTable(); // Configura el modelo de la tabla y el sorter
         cargarInventario(); // Carga los datos iniciales de los productos
         calcularTotales(); // Calcula y muestra los totales de inversión y venta.
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE); 
         pack();
         setLocationRelativeTo(null);
+        setupBusqueda();
+    }
+    
+    private void inicializarTabla() {
+        modeloTablaInventario = new DefaultTableModel() {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false; // Hacer que las celdas no sean editables
+            }
+        };
+        tablaInventario.setModel(modeloTablaInventario);
+        
+        // Configurar las columnas de la tabla (ajusta estos nombres y orden según tu imagen)
+        modeloTablaInventario.addColumn("Código");
+        modeloTablaInventario.addColumn("Nombre");
+        modeloTablaInventario.addColumn("Precio de venta");
+        modeloTablaInventario.addColumn("Cantidad"); // Esto es Stock en tu BD, pero "Cantidad" en la UI
+        modeloTablaInventario.addColumn("Marca");
+        modeloTablaInventario.addColumn("Descuento");
+        modeloTablaInventario.addColumn("Descripción");
+        // Asegúrate de que la cantidad de columnas aquí coincida con la cantidad de campos que lees en cargarInventario()
+
+        // Inicializar el TableRowSorter
+        sorter = new TableRowSorter<>(modeloTablaInventario);
+        tablaInventario.setRowSorter(sorter);
+    }
+    
+    private void setupBusqueda() {
+        // Listener para el campo de texto de búsqueda (filtro en tiempo real)
+        if (txtBuscar != null) { // Asegurarse de que txtBuscar esté inicializado
+            txtBuscar.getDocument().addDocumentListener(new DocumentListener() {
+                @Override
+                public void insertUpdate(DocumentEvent e) {
+                    aplicarFiltro();
+                }
+
+                @Override
+                public void removeUpdate(DocumentEvent e) {
+                    aplicarFiltro();
+                }
+
+                @Override
+                public void changedUpdate(DocumentEvent e) {
+                    // No se usa para JTextFields planos
+                }
+            });
+        }
+    }
+    
+    private void aplicarFiltro() {
+        String textoBusqueda = txtBuscar.getText().trim();
+        if (textoBusqueda.isEmpty()) {
+            sorter.setRowFilter(null); // Si el campo está vacío, no hay filtro (mostrar todo)
+        } else {
+            try {
+                // RowFilter.regexFilter(regex, columna1, columna2, ...)
+                // Esto busca el texto en todas las columnas (se puede especificar)
+                // "(?i)" para que sea case-insensitive (ignorando mayúsculas/minúsculas)
+                sorter.setRowFilter(RowFilter.regexFilter("(?i)" + textoBusqueda));
+            } catch (PatternSyntaxException e) {
+                // Manejar errores si la expresión regular es inválida 
+                System.err.println("Error en la expresión regular de búsqueda: " + e.getMessage());
+                JOptionPane.showMessageDialog(this, "Carácter de búsqueda inválido. Por favor, revisa tu entrada.", "Error de Búsqueda", JOptionPane.WARNING_MESSAGE);
+                sorter.setRowFilter(null); // Borrar el filtro en caso de error
+            }
+        }
+    }
+    
+    public void cargarInventario() {
+        modeloTablaInventario.setRowCount(0); // Limpiar tabla antes de cargar
+        
+        Connection currentConnection = Conexion.conectar();
+        if (currentConnection == null) {
+            JOptionPane.showMessageDialog(this, "No hay conexión a la base de datos.", "Error de Conexión", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+
+        try {
+            // Asegúrate que esta query selecciona todas las columnas que quieres mostrar
+            // Y que el orden de las columnas en la SELECT coincida con el orden en que las agregas a la fila.
+            String sql = "SELECT IdProducto, Nombre, Precio, PrecioCompra, Stock, Marca, Descuento, Descripcion FROM producto";
+            pstmt = currentConnection.prepareStatement(sql);
+            rs = pstmt.executeQuery();
+
+            while (rs.next()) {
+                Object[] fila = new Object[7]; // Ajusta el tamaño a 7 columnas según tu UI (Código, Nombre, Precio de ventas, Cantidad, Marca, Descuento, Descripción)
+                fila[0] = rs.getString("IdProducto");
+                fila[1] = rs.getString("Nombre");
+                fila[2] = rs.getDouble("Precio"); // Precio de venta
+                fila[3] = rs.getInt("Stock");    // Cantidad
+                fila[4] = rs.getString("Marca");
+                fila[5] = rs.getDouble("Descuento");
+                fila[6] = rs.getString("Descripcion");
+                
+                modeloTablaInventario.addRow(fila);
+            }
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Error al cargar inventario: " + e.getMessage(), "Error de SQL", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
+        } finally {
+            try {
+                if (rs != null) rs.close();
+                if (pstmt != null) pstmt.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+        calcularTotales(); // Vuelve a calcular los totales después de cargar
     }
     
     private void setupTable() {
@@ -44,48 +159,7 @@ public class Inventario extends javax.swing.JFrame {
         tablaInventario.setRowSorter(sorter);
     }
     
-    public void cargarInventario() {
-        modeloTablaInventario.setRowCount(0); 
-
-        Connection currentConnection = Conexion.conectar(); 
-        if (currentConnection == null) {
-            JOptionPane.showMessageDialog(this, "No hay conexión a la base de datos. No se puede cargar el inventario.", "Error de Conexión", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        PreparedStatement consulta = null;
-        ResultSet resultado = null;
-
-        try {
-            String sql = "SELECT IdProducto, Nombre, Precio, Stock, Marca, Descripcion FROM producto ORDER BY IdProducto"; 
-            consulta = currentConnection.prepareStatement(sql);
-            resultado = consulta.executeQuery();
-
-            while (resultado.next()) {
-                Object[] fila = {
-                    resultado.getString("IdProducto"),
-                    resultado.getString("Nombre"),
-                    resultado.getDouble("Precio"), 
-                    resultado.getInt("Stock"), 
-                    resultado.getString("Marca"),
-                    0.0, 
-                    resultado.getString("Descripcion")
-                };
-                modeloTablaInventario.addRow(fila); 
-            }
-        } catch (SQLException e) {
-            JOptionPane.showMessageDialog(this, "Error al cargar el inventario: " + e.getMessage(), "Error de SQL", JOptionPane.ERROR_MESSAGE);
-            e.printStackTrace();
-        } finally {
-            try {
-                if (resultado != null) resultado.close();
-                if (consulta != null) consulta.close();
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-            calcularTotales(); 
-        }
-    }
+    
     
     private void modificarProducto() {
         int filaSeleccionada = tablaInventario.getSelectedRow();
@@ -95,7 +169,6 @@ public class Inventario extends javax.swing.JFrame {
         }
 
         String idProducto = modeloTablaInventario.getValueAt(filaSeleccionada, 0).toString(); 
-        JOptionPane.showMessageDialog(this, "Abriendo ventana para modificar producto con ID: " + idProducto, "Modificar", JOptionPane.INFORMATION_MESSAGE);
     }
     
     private void eliminarProducto() {
@@ -200,9 +273,6 @@ public class Inventario extends javax.swing.JFrame {
             try {
                 if (rs != null) rs.close();
                 if (pstmt != null) pstmt.close();
-                // Si tu `Conexion.conectar()` abre una nueva conexión cada vez, deberías cerrarla aquí.
-                // Si `Conexion.conectar()` gestiona una conexión singleton, no la cierres aquí.
-                // Conexion.cerrarConexion(); // Descomentar si cada operación gestiona su propia conexión.
             } catch (SQLException e) {
                 e.printStackTrace();
             }
@@ -545,7 +615,7 @@ public class Inventario extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void txtBuscarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txtBuscarActionPerformed
-        // TODO add your handling code here:
+        
     }//GEN-LAST:event_txtBuscarActionPerformed
 
     private void btnActualizarTablaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnActualizarTablaActionPerformed
@@ -553,8 +623,14 @@ public class Inventario extends javax.swing.JFrame {
     }//GEN-LAST:event_btnActualizarTablaActionPerformed
 
     private void btnModificarProductoActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnModificarProductoActionPerformed
-        new Modificar().setVisible(true); // Tu código original
-        modificarProducto();
+        int filaSeleccionada = tablaInventario.getSelectedRow();
+    if (filaSeleccionada == -1) {
+        JOptionPane.showMessageDialog(this, "Selecciona un producto de la tabla para modificar.", "Advertencia", JOptionPane.WARNING_MESSAGE);
+        return;
+    }
+    String idProducto = tablaInventario.getValueAt(tablaInventario.convertRowIndexToModel(filaSeleccionada), 0).toString(); 
+    Modificar modificarProductoFrame = new Modificar(this, this, idProducto);
+    modificarProductoFrame.setVisible(true);
     }//GEN-LAST:event_btnModificarProductoActionPerformed
 
     private void btnGenerarReporteActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnGenerarReporteActionPerformed

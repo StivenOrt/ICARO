@@ -1,13 +1,239 @@
 package Ventanas;
 
-import javax.swing.JFrame;
+import Conexiones.Conexion; // Importa tu clase de conexión
+import javax.swing.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 public class Modificar extends javax.swing.JFrame {
+    
+    // Almacena el ID del producto que estamos modificando
+    private String idProductoAModificar; 
+    // Referencia a la ventana de Inventario para poder actualizar la tabla principal
+    private Inventario inventarioFrame;
 
     public Modificar() {
         initComponents();
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+    }
+    
+    public Modificar(java.awt.Frame parent, Inventario inventarioFrame, String idProducto) {
+        super();
+        this.inventarioFrame = inventarioFrame;
+        this.idProductoAModificar = idProducto; // Guarda el ID del producto a modificar
+
+        initComponents(); // Método generado por NetBeans para inicializar los componentes visuales
+        
+        // Hacemos que el campo del código sea no editable
+        jTextField1.setEditable(false); 
+        // El campo para añadir/quitar cantidad (jTextField6) es editable por si el usuario quiere ingresar un número específico
+        // jTextField6.setEditable(true); // Ya es editable por defecto
+
+        // ¡Ya no necesitamos setupListeners() aquí!
+        // Los listeners para los botones se manejarán directamente en los métodos ActionPerformed.
+
+        cargarDatosProducto(); // Carga los datos del producto al iniciar la ventana
+
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setLocationRelativeTo(parent); // Centra esta ventana respecto al padre (Inventario)
+        setTitle("MODIFICAR PRODUCTOS"); // Título de la ventana
+    }
+    
+    private void cargarDatosProducto() {
+        if (idProductoAModificar == null || idProductoAModificar.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "No se especificó un producto para modificar.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        Connection currentConnection = Conexion.conectar();
+        if (currentConnection == null) {
+            JOptionPane.showMessageDialog(this, "No hay conexión a la base de datos para cargar datos del producto.", "Error de Conexión", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+
+        try {
+            String sql = "SELECT IdProducto, Nombre, Precio, PrecioCompra, Stock, Marca, Descuento, Descripcion FROM producto WHERE IdProducto = ?";
+            pstmt = currentConnection.prepareStatement(sql);
+            pstmt.setString(1, idProductoAModificar);
+            rs = pstmt.executeQuery();
+
+            if (rs.next()) {
+                jTextField1.setText(rs.getString("IdProducto"));
+                jTextField2.setText(rs.getString("Nombre"));
+                jTextField3.setText(String.valueOf(rs.getDouble("Precio")));
+                jTextField4.setText(String.valueOf(rs.getDouble("PrecioCompra")));
+                jTextField5.setText(String.valueOf(rs.getInt("Stock")));
+                jTextField7.setText(rs.getString("Marca")); 
+                jTextField8.setText(String.valueOf(rs.getDouble("Descuento"))); 
+                jTextField9.setText(rs.getString("Descripcion")); 
+                
+                jTextField6.setText("0"); // Inicializa el campo de añadir/quitar en 0
+            } else {
+                JOptionPane.showMessageDialog(this, "Producto no encontrado en la base de datos.", "Error", JOptionPane.ERROR_MESSAGE);
+                this.dispose(); // Cierra la ventana si no se encuentra el producto
+            }
+
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Error al cargar los datos del producto: " + e.getMessage(), "Error de SQL", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
+        } finally {
+            try {
+                if (rs != null) rs.close();
+                if (pstmt != null) pstmt.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    
+    private void ajustarCantidad(int direccion) {
+        try {
+            System.out.println("--- Ajustando Cantidad ---"); // Debug
+            int currentStock = Integer.parseInt(jTextField5.getText());
+            System.out.println("Stock inicial (jTextField5): " + currentStock); // Debug
+
+            int cantidadAjuste = 0;
+            String ajusteText = jTextField6.getText().trim();
+            if (ajusteText.isEmpty()) {
+                cantidadAjuste = 1; // Si está vacío, asume un ajuste de 1 por defecto
+                System.out.println("Campo de ajuste (jTextField6) vacío, asumiendo ajuste de 1."); // Debug
+            } else {
+                try {
+                    cantidadAjuste = Integer.parseInt(ajusteText);
+                    System.out.println("Cantidad a ajustar (jTextField6): " + cantidadAjuste); // Debug
+                } catch (NumberFormatException e) {
+                    JOptionPane.showMessageDialog(this, "El valor a añadir/quitar debe ser un número entero válido.", "Error de Entrada", JOptionPane.ERROR_MESSAGE);
+                    jTextField6.setText("0"); 
+                    return; 
+                }
+            }
+            
+            if (direccion == -1) { // Botón "-"
+                int stockAntesDeLimite = currentStock; // Guarda el valor antes de aplicar el límite
+                currentStock -= cantidadAjuste;
+                if (currentStock < 0) {
+                    currentStock = 0; 
+                    System.out.println("¡Advertencia! Stock llegó a 0 al intentar decrementar de " + stockAntesDeLimite + " por " + cantidadAjuste); // Debug específico
+                }
+                System.out.println("Nuevo stock después de restar: " + currentStock); // Debug
+            } else { // Botón "+"
+                currentStock += cantidadAjuste;
+                System.out.println("Nuevo stock después de sumar: " + currentStock); // Debug
+            }
+            
+            jTextField5.setText(String.valueOf(currentStock));
+            jTextField5.revalidate(); 
+            jTextField5.repaint();    
+
+            jTextField6.setText("0"); 
+            System.out.println("--- Ajuste de Cantidad Finalizado ---"); // Debug
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(this, "La cantidad actual (Stock) debe ser un número entero válido.", "Error de Entrada", JOptionPane.ERROR_MESSAGE);
+            ex.printStackTrace(); 
+            jTextField6.setText("0"); 
+        }
+    }
+    
+    private void guardarCambiosProducto() {
+        System.out.println("--- Guardando Cambios ---"); // Debug
+        // 1. Validar campos
+        String codigo = jTextField1.getText().trim(); 
+        String nombre = jTextField2.getText().trim();
+        String precioVentaStr = jTextField3.getText().trim();
+        String precioCompraStr = jTextField4.getText().trim();
+        String cantidadStr = jTextField5.getText().trim();
+        String marca = jTextField7.getText().trim();
+        String descuentoStr = jTextField8.getText().trim();
+        String descripcion = jTextField9.getText().trim();
+
+        System.out.println("Valores de campos: Código=" + codigo + ", Nombre=" + nombre + ", Cantidad=" + cantidadStr); // Debug
+
+        if (nombre.isEmpty() || precioVentaStr.isEmpty() || precioCompraStr.isEmpty() || 
+            cantidadStr.isEmpty() || marca.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Por favor, completa todos los campos obligatorios (Nombre, Precios, Cantidad, Marca).", "Campos Incompletos", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        double precioVenta;
+        double precioCompra;
+        int cantidad;
+        double descuento = 0.0; 
+
+        try {
+            precioVenta = Double.parseDouble(precioVentaStr);
+            precioCompra = Double.parseDouble(precioCompraStr);
+            cantidad = Integer.parseInt(cantidadStr);
+            if (!descuentoStr.isEmpty()) {
+                descuento = Double.parseDouble(descuentoStr);
+            }
+            System.out.println("Valores numéricos parseados: PV=" + precioVenta + ", PC=" + precioCompra + ", Stock=" + cantidad + ", Descuento=" + descuento); // Debug
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "Por favor, introduce valores numéricos válidos para Precio Venta, Precio Compra, Cantidad y Descuento.", "Error de Formato", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace(); // <-- IMPRIMIR EL STACK TRACE
+            return;
+        }
+
+        // 2. Conectar a la base de datos
+        Connection currentConnection = Conexion.conectar();
+        if (currentConnection == null) {
+            JOptionPane.showMessageDialog(this, "No hay conexión a la base de datos.", "Error de Conexión", JOptionPane.ERROR_MESSAGE);
+            System.out.println("Error: Conexión a la base de datos es nula."); // Debug
+            return;
+        }
+        System.out.println("Conexión a la BD establecida."); // Debug
+
+        PreparedStatement pstmt = null;
+
+        try {
+            // Query UPDATE para la tabla 'producto'
+            String sql = "UPDATE producto SET Nombre = ?, Precio = ?, PrecioCompra = ?, Stock = ?, Marca = ?, Descuento = ?, Descripcion = ? WHERE IdProducto = ?";
+            System.out.println("Query SQL: " + sql); // Debug
+            System.out.println("Parámetros: Nombre=" + nombre + ", Precio=" + precioVenta + ", PrecioCompra=" + precioCompra + ", Stock=" + cantidad + ", Marca=" + marca + ", Descuento=" + descuento + ", Descripcion=" + descripcion + ", IdProducto=" + codigo); // Debug
+
+            pstmt = currentConnection.prepareStatement(sql);
+
+            pstmt.setString(1, nombre);
+            pstmt.setDouble(2, precioVenta);
+            pstmt.setDouble(3, precioCompra);
+            pstmt.setInt(4, cantidad);
+            pstmt.setString(5, marca);
+            pstmt.setDouble(6, descuento);
+            pstmt.setString(7, descripcion);
+            pstmt.setString(8, codigo); // Usa el código original para la cláusula WHERE
+
+            int filasAfectadas = pstmt.executeUpdate();
+            System.out.println("Filas afectadas por el UPDATE: " + filasAfectadas); // Debug
+
+            if (filasAfectadas > 0) {
+                JOptionPane.showMessageDialog(this, "Producto actualizado exitosamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                
+                // Actualiza la tabla en la ventana de Inventario
+                if (inventarioFrame != null) {
+                    inventarioFrame.cargarInventario(); 
+                    System.out.println("Tabla de Inventario actualizada."); // Debug
+                }
+                this.dispose(); 
+            } else {
+                JOptionPane.showMessageDialog(this, "No se pudo actualizar el producto. El código podría no existir.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Error al actualizar el producto: " + e.getMessage(), "Error de SQL", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace(); // <-- IMPRIMIR EL STACK TRACE para ver el error SQL
+        } finally {
+            try {
+                if (pstmt != null) pstmt.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+        System.out.println("--- Fin Guardando Cambios ---"); // Debug
     }
 
     @SuppressWarnings("unchecked")
@@ -86,18 +312,33 @@ public class Modificar extends javax.swing.JFrame {
         jButton1.setForeground(new java.awt.Color(255, 255, 255));
         jButton1.setText("Guardar cambios");
         jButton1.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(255, 255, 255), 3));
+        jButton1.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton1ActionPerformed(evt);
+            }
+        });
 
         jButton2.setBackground(new java.awt.Color(0, 0, 51));
         jButton2.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
         jButton2.setForeground(new java.awt.Color(255, 255, 255));
         jButton2.setText("+");
         jButton2.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(255, 255, 255)));
+        jButton2.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton2ActionPerformed(evt);
+            }
+        });
 
         jButton3.setBackground(new java.awt.Color(0, 0, 51));
         jButton3.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
         jButton3.setForeground(new java.awt.Color(255, 255, 255));
         jButton3.setText("-");
         jButton3.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(255, 255, 255)));
+        jButton3.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton3ActionPerformed(evt);
+            }
+        });
 
         jLabel3.setForeground(new java.awt.Color(255, 255, 255));
         jLabel3.setText("Añadir:");
@@ -256,8 +497,23 @@ public class Modificar extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void jTextField1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField1ActionPerformed
-        // TODO add your handling code here:
+        
     }//GEN-LAST:event_jTextField1ActionPerformed
+
+    private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
+        System.out.println("Botón '+' presionado.");
+        ajustarCantidad(1);
+    }//GEN-LAST:event_jButton2ActionPerformed
+
+    private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
+        System.out.println("Botón 'Guardar cambios' presionado.");
+        guardarCambiosProducto();
+    }//GEN-LAST:event_jButton1ActionPerformed
+
+    private void jButton3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton3ActionPerformed
+        System.out.println("Botón '-' presionado. Direccion: -1"); // <-- Asegúrate que dice -1
+        ajustarCantidad(-1);
+    }//GEN-LAST:event_jButton3ActionPerformed
 
     public static void main(String args[]) {
  
