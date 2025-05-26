@@ -298,7 +298,8 @@ public class HistorialVentas extends javax.swing.JFrame {
     }//GEN-LAST:event_jButton2ActionPerformed
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
-        new GenerarReportes().setVisible(true);
+        GenerarReportes reporteFrame = new GenerarReportes(this); // 'this' se refiere al JFrame actual (Inventario o HistorialVentas)
+        reporteFrame.setVisible(true);
     }//GEN-LAST:event_jButton1ActionPerformed
 
     public static void main(String args[]) {

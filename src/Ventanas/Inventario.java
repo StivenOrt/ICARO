@@ -634,8 +634,8 @@ public class Inventario extends javax.swing.JFrame {
     }//GEN-LAST:event_btnModificarProductoActionPerformed
 
     private void btnGenerarReporteActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnGenerarReporteActionPerformed
-        GenerarReportes generarReportesFrame = new GenerarReportes();
-        generarReportesFrame.setVisible(true);
+        GenerarReportes reporteFrame = new GenerarReportes(this); // 'this' se refiere al JFrame Inventario
+        reporteFrame.setVisible(true); // Hace visible la ventana de reportes
     }//GEN-LAST:event_btnGenerarReporteActionPerformed
 
     private void btnAgregarMercanciaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnAgregarMercanciaActionPerformed

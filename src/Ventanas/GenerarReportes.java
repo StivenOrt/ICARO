@@ -1,13 +1,331 @@
 package Ventanas;
 
 import javax.swing.JFrame;
+import Conexiones.Conexion; // Asegúrate de que esta clase exista y funcione
+import javax.swing.*;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
+// Importaciones para Apache POI (Excel y Word)
+import org.apache.poi.xssf.usermodel.XSSFWorkbook; // Para .xlsx (Excel)
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.xwpf.usermodel.XWPFDocument; // Para .docx (Word)
+import org.apache.poi.xwpf.usermodel.XWPFParagraph;
+import org.apache.poi.xwpf.usermodel.XWPFRun;
+
+// Importaciones para iText (PDF)
+import com.itextpdf.text.Document;
+import com.itextpdf.text.Paragraph;
+import com.itextpdf.text.pdf.PdfPTable;
+import com.itextpdf.text.pdf.PdfWriter;
+import com.itextpdf.text.Chunk; // Para espaciados o elementos simples
+import com.itextpdf.text.Font; // Para fuentes
+import com.itextpdf.text.FontFactory; // Para crear fuentes
+import com.itextpdf.text.BaseColor; // Para colores de fuente o fondo
+
 
 public class GenerarReportes extends javax.swing.JFrame {
-
-    public GenerarReportes() {
-        initComponents();
-        setLocationRelativeTo(null);
+    
+    private String formatoSeleccionado = "";
+    
+    public GenerarReportes (java.awt.Frame parent) {
+        super();
+        initComponents(); // NetBeans genera el código aquí y los ActionPerformed
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setLocationRelativeTo(parent);
+        setTitle("GENERAR REPORTES EN:"); // Título de la ventana
+    }
+    
+    private void generarReporteWord(File archivo) {
+        XWPFDocument document = new XWPFDocument();
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+
+        try {
+            conn = Conexion.conectar();
+            // Asegúrate de que la query seleccione todas las columnas necesarias
+            String sql = "SELECT IdProducto, Nombre, Precio, PrecioCompra, Stock, Marca, Descuento, Descripcion FROM producto";
+            pstmt = conn.prepareStatement(sql);
+            rs = pstmt.executeQuery();
+
+            // Título del reporte
+            XWPFParagraph title = document.createParagraph();
+            XWPFRun titleRun = title.createRun();
+            titleRun.setText("REPORTE DE INVENTARIO - WORD");
+            titleRun.setBold(true);
+            titleRun.setFontSize(18);
+            titleRun.addBreak(); // Salto de línea
+
+            // Encabezados de la tabla como párrafos
+            XWPFParagraph header = document.createParagraph();
+            XWPFRun headerRun = header.createRun();
+            headerRun.setText("Código | Nombre | P. Venta | P. Compra | Stock | Marca | Descuento | Descripción");
+            headerRun.setBold(true);
+            headerRun.addBreak();
+
+            // Datos del inventario
+            while (rs.next()) {
+                XWPFParagraph productPara = document.createParagraph();
+                XWPFRun productRun = productPara.createRun();
+                productRun.setText(
+                    String.format("%s | %s | %.2f | %.2f | %d | %s | %.2f%% | %s",
+                        rs.getString("IdProducto"),
+                        rs.getString("Nombre"),
+                        rs.getDouble("Precio"),
+                        rs.getDouble("PrecioCompra"),
+                        rs.getInt("Stock"),
+                        rs.getString("Marca"),
+                        rs.getDouble("Descuento"),
+                        rs.getString("Descripcion")
+                    )
+                );
+                productRun.addBreak();
+            }
+
+            try (FileOutputStream out = new FileOutputStream(archivo)) {
+                document.write(out);
+            }
+            JOptionPane.showMessageDialog(this, "Reporte WORD generado exitosamente en:\n" + archivo.getAbsolutePath(), "Éxito", JOptionPane.INFORMATION_MESSAGE);
+
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Error al generar reporte WORD: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
+        } finally {
+            try {
+                if (rs != null) rs.close();
+                if (pstmt != null) pstmt.close();
+                if (conn != null) conn.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    
+    private void generarReporteExcel(File archivo) {
+        XSSFWorkbook workbook = new XSSFWorkbook();
+        Sheet sheet = workbook.createSheet("Inventario");
+
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+
+        try {
+            conn = Conexion.conectar();
+            String sql = "SELECT IdProducto, Nombre, Precio, PrecioCompra, Stock, Marca, Descuento, Descripcion FROM producto";
+            pstmt = conn.prepareStatement(sql);
+            rs = pstmt.executeQuery();
+
+            // Encabezados de la tabla
+            Row headerRow = sheet.createRow(0);
+            String[] headers = {"ID Producto", "Nombre", "Precio Venta", "Precio Compra", "Stock", "Marca", "Descuento", "Descripción"};
+            for (int i = 0; i < headers.length; i++) {
+                Cell cell = headerRow.createCell(i);
+                cell.setCellValue(headers[i]);
+            }
+
+            // Datos
+            int rowNum = 1;
+            while (rs.next()) {
+                Row row = sheet.createRow(rowNum++);
+                row.createCell(0).setCellValue(rs.getString("IdProducto"));
+                row.createCell(1).setCellValue(rs.getString("Nombre"));
+                row.createCell(2).setCellValue(rs.getDouble("Precio"));
+                row.createCell(3).setCellValue(rs.getDouble("PrecioCompra"));
+                row.createCell(4).setCellValue(rs.getInt("Stock"));
+                row.createCell(5).setCellValue(rs.getString("Marca"));
+                row.createCell(6).setCellValue(rs.getDouble("Descuento"));
+                row.createCell(7).setCellValue(rs.getString("Descripcion"));
+            }
+
+            // Autoajustar columnas para que el contenido sea visible
+            for (int i = 0; i < headers.length; i++) {
+                sheet.autoSizeColumn(i);
+            }
+
+            try (FileOutputStream out = new FileOutputStream(archivo)) {
+                workbook.write(out);
+            }
+            JOptionPane.showMessageDialog(this, "Reporte EXCEL generado exitosamente en:\n" + archivo.getAbsolutePath(), "Éxito", JOptionPane.INFORMATION_MESSAGE);
+
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Error al generar reporte EXCEL: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
+        } finally {
+            try {
+                if (rs != null) rs.close();
+                if (pstmt != null) pstmt.close();
+                if (conn != null) conn.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private void generarReportePdf(File archivo) {
+        Document document = new Document();
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+
+        try {
+            PdfWriter.getInstance(document, new FileOutputStream(archivo));
+            document.open();
+            
+            Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 18, BaseColor.BLACK);
+            Paragraph title = new Paragraph("REPORTE DE INVENTARIO - PDF", titleFont);
+            title.setAlignment(Paragraph.ALIGN_CENTER);
+            document.add(title);
+            document.add(Chunk.NEWLINE);
+
+            conn = Conexion.conectar();
+            String sql = "SELECT IdProducto, Nombre, Precio, PrecioCompra, Stock, Marca, Descuento, Descripcion FROM producto";
+            pstmt = conn.prepareStatement(sql);
+            rs = pstmt.executeQuery();
+
+            PdfPTable table = new PdfPTable(8); // 8 columnas
+            table.setWidthPercentage(100);
+            table.setSpacingBefore(10f);
+            table.setSpacingAfter(10f);
+            float[] columnWidths = {1f, 2f, 1f, 1f, 0.8f, 1.2f, 0.8f, 2f};
+            table.setWidths(columnWidths);
+
+            Font headerFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9, BaseColor.WHITE);
+            BaseColor headerBgColor = new BaseColor(60, 141, 188); 
+
+            // Celdas de encabezado para PDF
+            com.itextpdf.text.Phrase phrase; 
+            com.itextpdf.text.pdf.PdfPCell headerCell; 
+
+            phrase = new com.itextpdf.text.Phrase("ID", headerFont);
+            headerCell = new com.itextpdf.text.pdf.PdfPCell(phrase);
+            headerCell.setBackgroundColor(headerBgColor);
+            headerCell.setHorizontalAlignment(com.itextpdf.text.Element.ALIGN_CENTER);
+            headerCell.setPadding(5);
+            table.addCell(headerCell);
+
+            phrase = new com.itextpdf.text.Phrase("Nombre", headerFont);
+            headerCell = new com.itextpdf.text.pdf.PdfPCell(phrase);
+            headerCell.setBackgroundColor(headerBgColor);
+            headerCell.setHorizontalAlignment(com.itextpdf.text.Element.ALIGN_CENTER);
+            headerCell.setPadding(5);
+            table.addCell(headerCell);
+            
+            phrase = new com.itextpdf.text.Phrase("P. Venta", headerFont);
+            headerCell = new com.itextpdf.text.pdf.PdfPCell(phrase);
+            headerCell.setBackgroundColor(headerBgColor);
+            headerCell.setHorizontalAlignment(com.itextpdf.text.Element.ALIGN_CENTER);
+            headerCell.setPadding(5);
+            table.addCell(headerCell);
+
+            phrase = new com.itextpdf.text.Phrase("P. Compra", headerFont);
+            headerCell = new com.itextpdf.text.pdf.PdfPCell(phrase);
+            headerCell.setBackgroundColor(headerBgColor);
+            headerCell.setHorizontalAlignment(com.itextpdf.text.Element.ALIGN_CENTER);
+            headerCell.setPadding(5);
+            table.addCell(headerCell);
+
+            phrase = new com.itextpdf.text.Phrase("Stock", headerFont);
+            headerCell = new com.itextpdf.text.pdf.PdfPCell(phrase);
+            headerCell.setBackgroundColor(headerBgColor);
+            headerCell.setHorizontalAlignment(com.itextpdf.text.Element.ALIGN_CENTER);
+            headerCell.setPadding(5);
+            table.addCell(headerCell);
+
+            phrase = new com.itextpdf.text.Phrase("Marca", headerFont);
+            headerCell = new com.itextpdf.text.pdf.PdfPCell(phrase);
+            headerCell.setBackgroundColor(headerBgColor);
+            headerCell.setHorizontalAlignment(com.itextpdf.text.Element.ALIGN_CENTER);
+            headerCell.setPadding(5);
+            table.addCell(headerCell);
+            
+            phrase = new com.itextpdf.text.Phrase("Desc. (%)", headerFont);
+            headerCell = new com.itextpdf.text.pdf.PdfPCell(phrase);
+            headerCell.setBackgroundColor(headerBgColor);
+            headerCell.setHorizontalAlignment(com.itextpdf.text.Element.ALIGN_CENTER);
+            headerCell.setPadding(5);
+            table.addCell(headerCell);
+
+            phrase = new com.itextpdf.text.Phrase("Descripción", headerFont);
+            headerCell = new com.itextpdf.text.pdf.PdfPCell(phrase);
+            headerCell.setBackgroundColor(headerBgColor);
+            headerCell.setHorizontalAlignment(com.itextpdf.text.Element.ALIGN_CENTER);
+            headerCell.setPadding(5);
+            table.addCell(headerCell);
+
+            // Datos de la tabla PDF
+            Font dataFont = FontFactory.getFont(FontFactory.HELVETICA, 8, BaseColor.BLACK);
+            while (rs.next()) {
+                table.addCell(new Paragraph(rs.getString("IdProducto"), dataFont));
+                table.addCell(new Paragraph(rs.getString("Nombre"), dataFont));
+                table.addCell(new Paragraph(String.format("%,.2f", rs.getDouble("Precio")), dataFont));
+                table.addCell(new Paragraph(String.format("%,.2f", rs.getDouble("PrecioCompra")), dataFont));
+                table.addCell(new Paragraph(String.valueOf(rs.getInt("Stock")), dataFont));
+                table.addCell(new Paragraph(rs.getString("Marca"), dataFont));
+                table.addCell(new Paragraph(String.format("%,.2f", rs.getDouble("Descuento")), dataFont));
+                table.addCell(new Paragraph(rs.getString("Descripcion"), dataFont));
+            }
+            document.add(table); // Añade la tabla al documento
+
+            document.close(); // Cierra el documento
+            JOptionPane.showMessageDialog(this, "Reporte PDF generado exitosamente en:\n" + archivo.getAbsolutePath(), "Éxito", JOptionPane.INFORMATION_MESSAGE);
+
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Error al generar reporte PDF: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
+        } finally {
+            try {
+                if (rs != null) rs.close();
+                if (pstmt != null) pstmt.close();
+                if (conn != null) conn.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    
+    private void generarReporte() {
+        if (formatoSeleccionado.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Por favor, selecciona un formato de reporte (WORD, EXCEL o PDF).", "Formato No Seleccionado", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("Guardar Reporte");
+        // Establecer el nombre de archivo por defecto con la extensión correcta
+        fileChooser.setSelectedFile(new File("ReporteInventario." + formatoSeleccionado.toLowerCase()));
+
+        int userSelection = fileChooser.showSaveDialog(this);
+
+        if (userSelection == JFileChooser.APPROVE_OPTION) {
+            File fileToSave = fileChooser.getSelectedFile();
+
+            // Asegurarse de que el archivo tenga la extensión correcta si el usuario no la puso
+            String filePath = fileToSave.getAbsolutePath();
+            String extension = "." + formatoSeleccionado.toLowerCase();
+            if (!filePath.toLowerCase().endsWith(extension)) {
+                fileToSave = new File(filePath + extension);
+            }
+
+            switch (formatoSeleccionado) {
+                case "WORD":
+                    generarReporteWord(fileToSave);
+                    break;
+                case "EXCEL":
+                    generarReporteExcel(fileToSave);
+                    break;
+                case "PDF":
+                    generarReportePdf(fileToSave);
+                    break;
+            }
+        }
     }
 
     @SuppressWarnings("unchecked")
@@ -17,10 +335,10 @@ public class GenerarReportes extends javax.swing.JFrame {
         jPanel1 = new javax.swing.JPanel();
         jPanel2 = new javax.swing.JPanel();
         jLabel1 = new javax.swing.JLabel();
-        jButton1 = new javax.swing.JButton();
-        jButton2 = new javax.swing.JButton();
-        jButton3 = new javax.swing.JButton();
-        jButton4 = new javax.swing.JButton();
+        btnWord = new javax.swing.JButton();
+        btnPDF = new javax.swing.JButton();
+        btnExcel = new javax.swing.JButton();
+        btnGenerar = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -51,31 +369,46 @@ public class GenerarReportes extends javax.swing.JFrame {
                 .addContainerGap())
         );
 
-        jButton1.setBackground(new java.awt.Color(0, 51, 255));
-        jButton1.setFont(new java.awt.Font("Segoe UI", 1, 48)); // NOI18N
-        jButton1.setForeground(new java.awt.Color(255, 255, 255));
-        jButton1.setText("WORD");
-        jButton1.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(255, 255, 255), 4));
-
-        jButton2.setBackground(new java.awt.Color(204, 0, 0));
-        jButton2.setFont(new java.awt.Font("Segoe UI", 1, 48)); // NOI18N
-        jButton2.setForeground(new java.awt.Color(255, 255, 255));
-        jButton2.setText("PDF");
-        jButton2.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(255, 255, 255), 4));
-
-        jButton3.setBackground(new java.awt.Color(0, 82, 0));
-        jButton3.setFont(new java.awt.Font("Segoe UI", 1, 48)); // NOI18N
-        jButton3.setForeground(new java.awt.Color(255, 255, 255));
-        jButton3.setText("EXCEL");
-        jButton3.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(255, 255, 255), 4));
-
-        jButton4.setBackground(new java.awt.Color(204, 204, 204));
-        jButton4.setFont(new java.awt.Font("Segoe UI", 1, 30)); // NOI18N
-        jButton4.setText("Generar");
-        jButton4.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
-        jButton4.addActionListener(new java.awt.event.ActionListener() {
+        btnWord.setBackground(new java.awt.Color(0, 51, 255));
+        btnWord.setFont(new java.awt.Font("Segoe UI", 1, 48)); // NOI18N
+        btnWord.setForeground(new java.awt.Color(255, 255, 255));
+        btnWord.setText("WORD");
+        btnWord.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(255, 255, 255), 4));
+        btnWord.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton4ActionPerformed(evt);
+                btnWordActionPerformed(evt);
+            }
+        });
+
+        btnPDF.setBackground(new java.awt.Color(204, 0, 0));
+        btnPDF.setFont(new java.awt.Font("Segoe UI", 1, 48)); // NOI18N
+        btnPDF.setForeground(new java.awt.Color(255, 255, 255));
+        btnPDF.setText("PDF");
+        btnPDF.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(255, 255, 255), 4));
+        btnPDF.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnPDFActionPerformed(evt);
+            }
+        });
+
+        btnExcel.setBackground(new java.awt.Color(0, 82, 0));
+        btnExcel.setFont(new java.awt.Font("Segoe UI", 1, 48)); // NOI18N
+        btnExcel.setForeground(new java.awt.Color(255, 255, 255));
+        btnExcel.setText("EXCEL");
+        btnExcel.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(255, 255, 255), 4));
+        btnExcel.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnExcelActionPerformed(evt);
+            }
+        });
+
+        btnGenerar.setBackground(new java.awt.Color(204, 204, 204));
+        btnGenerar.setFont(new java.awt.Font("Segoe UI", 1, 30)); // NOI18N
+        btnGenerar.setText("Generar");
+        btnGenerar.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
+        btnGenerar.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnGenerarActionPerformed(evt);
             }
         });
 
@@ -89,13 +422,13 @@ public class GenerarReportes extends javax.swing.JFrame {
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(jPanel1Layout.createSequentialGroup()
                         .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 410, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 410, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addComponent(btnPDF, javax.swing.GroupLayout.PREFERRED_SIZE, 410, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(btnWord, javax.swing.GroupLayout.PREFERRED_SIZE, 410, javax.swing.GroupLayout.PREFERRED_SIZE))
                         .addContainerGap(231, Short.MAX_VALUE))
                     .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addComponent(jButton3, javax.swing.GroupLayout.PREFERRED_SIZE, 410, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(btnExcel, javax.swing.GroupLayout.PREFERRED_SIZE, 410, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addComponent(jButton4, javax.swing.GroupLayout.PREFERRED_SIZE, 157, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(btnGenerar, javax.swing.GroupLayout.PREFERRED_SIZE, 157, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(33, 33, 33))))
         );
         jPanel1Layout.setVerticalGroup(
@@ -103,15 +436,15 @@ public class GenerarReportes extends javax.swing.JFrame {
             .addGroup(jPanel1Layout.createSequentialGroup()
                 .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(18, 18, 18)
-                .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 90, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(btnWord, javax.swing.GroupLayout.PREFERRED_SIZE, 90, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(18, 18, 18)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jButton3, javax.swing.GroupLayout.PREFERRED_SIZE, 90, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(btnExcel, javax.swing.GroupLayout.PREFERRED_SIZE, 90, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addGroup(jPanel1Layout.createSequentialGroup()
                         .addGap(22, 22, 22)
-                        .addComponent(jButton4)))
+                        .addComponent(btnGenerar)))
                 .addGap(18, 18, 18)
-                .addComponent(jButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 90, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(btnPDF, javax.swing.GroupLayout.PREFERRED_SIZE, 90, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap(26, Short.MAX_VALUE))
         );
 
@@ -129,24 +462,39 @@ public class GenerarReportes extends javax.swing.JFrame {
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
-    private void jButton4ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton4ActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jButton4ActionPerformed
+    private void btnGenerarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnGenerarActionPerformed
+        generarReporte(); // Llama al método principal de generación de reporte
+    }//GEN-LAST:event_btnGenerarActionPerformed
+
+    private void btnWordActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnWordActionPerformed
+        formatoSeleccionado = "WORD";
+        JOptionPane.showMessageDialog(this, "Has seleccionado WORD.", "Formato", JOptionPane.INFORMATION_MESSAGE);
+    }//GEN-LAST:event_btnWordActionPerformed
+
+    private void btnExcelActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnExcelActionPerformed
+        formatoSeleccionado = "EXCEL";
+        JOptionPane.showMessageDialog(this, "Has seleccionado EXCEL.", "Formato", JOptionPane.INFORMATION_MESSAGE);
+    }//GEN-LAST:event_btnExcelActionPerformed
+
+    private void btnPDFActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnPDFActionPerformed
+        formatoSeleccionado = "PDF";
+        JOptionPane.showMessageDialog(this, "Has seleccionado PDF.", "Formato", JOptionPane.INFORMATION_MESSAGE);
+    }//GEN-LAST:event_btnPDFActionPerformed
 
     public static void main(String args[]) {
 
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
-                new GenerarReportes().setVisible(true);
+                
             }
         });
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JButton jButton1;
-    private javax.swing.JButton jButton2;
-    private javax.swing.JButton jButton3;
-    private javax.swing.JButton jButton4;
+    private javax.swing.JButton btnExcel;
+    private javax.swing.JButton btnGenerar;
+    private javax.swing.JButton btnPDF;
+    private javax.swing.JButton btnWord;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;
