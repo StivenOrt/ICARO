@@ -12,12 +12,16 @@ import java.sql.SQLException;
 
 // Importaciones para Apache POI (Excel y Word)
 import org.apache.poi.xssf.usermodel.XSSFWorkbook; // Para .xlsx (Excel)
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.xwpf.usermodel.XWPFDocument; // Para .docx (Word)
 import org.apache.poi.xwpf.usermodel.XWPFParagraph;
 import org.apache.poi.xwpf.usermodel.XWPFRun;
+import java.io.IOException;
+import org.apache.poi.ss.usermodel.BorderStyle;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.xssf.usermodel.XSSFCell;
+import org.apache.poi.xssf.usermodel.XSSFFont;
+import org.apache.poi.xssf.usermodel.XSSFRow;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
 
 // Importaciones para iText (PDF)
 import com.itextpdf.text.Document;
@@ -101,7 +105,6 @@ public class GenerarReportes extends javax.swing.JFrame {
             try {
                 if (rs != null) rs.close();
                 if (pstmt != null) pstmt.close();
-                if (conn != null) conn.close();
             } catch (SQLException e) {
                 e.printStackTrace();
             }
@@ -110,7 +113,7 @@ public class GenerarReportes extends javax.swing.JFrame {
     
     private void generarReporteExcel(File archivo) {
         XSSFWorkbook workbook = new XSSFWorkbook();
-        Sheet sheet = workbook.createSheet("Inventario");
+        XSSFSheet sheet = workbook.createSheet("Inventario");
 
         Connection conn = null;
         PreparedStatement pstmt = null;
@@ -121,20 +124,39 @@ public class GenerarReportes extends javax.swing.JFrame {
             String sql = "SELECT IdProducto, Nombre, Precio, PrecioCompra, Stock, Marca, Descuento, Descripcion FROM producto";
             pstmt = conn.prepareStatement(sql);
             rs = pstmt.executeQuery();
+            
+            // --- Definir estilos de celda ---
+             // Estilo para todas las celdas (bordes finos)
+            CellStyle borderStyle = workbook.createCellStyle();
+            borderStyle.setBorderBottom(BorderStyle.THIN);
+            borderStyle.setBorderTop(BorderStyle.THIN);
+            borderStyle.setBorderLeft(BorderStyle.THIN);
+            borderStyle.setBorderRight(BorderStyle.THIN);
+
+            // Estilo para el texto en negrita (para la cabecera)
+            XSSFFont boldFont = workbook.createFont();
+            boldFont.setBold(true);
+
+            // Estilo para el encabezado (bordes finos y texto en negrita, SIN color de fondo)
+            CellStyle headerStyle = workbook.createCellStyle();
+            headerStyle.cloneStyleFrom(borderStyle); // Copia los bordes finos
+            headerStyle.setFont(boldFont); // Aplica la fuente en negrita
 
             // Encabezados de la tabla
-            Row headerRow = sheet.createRow(0);
-            String[] headers = {"ID Producto", "Nombre", "Precio Venta", "Precio Compra", "Stock", "Marca", "Descuento", "Descripción"};
+            XSSFRow headerRow = sheet.createRow(0);
+            String[] headers = {"IdProducto", "Nombre", "Precio", "PrecioCompra", "Stock", "Marca", "Descuento", "Descripción"};
             for (int i = 0; i < headers.length; i++) {
-                Cell cell = headerRow.createCell(i);
+                XSSFCell cell = headerRow.createCell(i);
                 cell.setCellValue(headers[i]);
+                cell.setCellStyle(headerStyle); // Aplicar estilo al encabezado
             }
 
-            // Datos
+             // Datos
             int rowNum = 1;
             while (rs.next()) {
-                Row row = sheet.createRow(rowNum++);
-                row.createCell(0).setCellValue(rs.getString("IdProducto"));
+                XSSFRow row = sheet.createRow(rowNum);
+
+                row.createCell(0).setCellValue(rs.getInt("IdProducto"));
                 row.createCell(1).setCellValue(rs.getString("Nombre"));
                 row.createCell(2).setCellValue(rs.getDouble("Precio"));
                 row.createCell(3).setCellValue(rs.getDouble("PrecioCompra"));
@@ -142,6 +164,15 @@ public class GenerarReportes extends javax.swing.JFrame {
                 row.createCell(5).setCellValue(rs.getString("Marca"));
                 row.createCell(6).setCellValue(rs.getDouble("Descuento"));
                 row.createCell(7).setCellValue(rs.getString("Descripcion"));
+
+                // Aplicar estilo de borde fino a todas las celdas de datos
+                for (int i = 0; i < headers.length; i++) {
+                    XSSFCell cell = row.getCell(i);
+                    if (cell != null) {
+                        cell.setCellStyle(borderStyle); // Aplica el estilo con bordes finos
+                    }
+                }
+                rowNum++;
             }
 
             // Autoajustar columnas para que el contenido sea visible
@@ -149,20 +180,31 @@ public class GenerarReportes extends javax.swing.JFrame {
                 sheet.autoSizeColumn(i);
             }
 
+            // --- Guardar el archivo ---
             try (FileOutputStream out = new FileOutputStream(archivo)) {
                 workbook.write(out);
+                System.out.println("Reporte EXCEL generado exitosamente en:\n" + archivo); // Usar 'archivo' directamente
+                JOptionPane.showMessageDialog(null, "Reporte EXCEL generado exitosamente en:\n" + archivo, "Exito", JOptionPane.INFORMATION_MESSAGE);
+            } catch (IOException e) {
+                System.err.println("Error de E/S al generar el reporte Excel: " + e.getMessage());
+                e.printStackTrace();
+                JOptionPane.showMessageDialog(null, "Error al generar reporte EXCEL: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             }
-            JOptionPane.showMessageDialog(this, "Reporte EXCEL generado exitosamente en:\n" + archivo.getAbsolutePath(), "Éxito", JOptionPane.INFORMATION_MESSAGE);
 
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Error al generar reporte EXCEL: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        } catch (SQLException e) {
+            System.err.println("Error SQL al generar el reporte Excel: " + e.getMessage());
             e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "Error al generar reporte EXCEL: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        } catch (Exception e) {
+            System.err.println("Error inesperado al generar el reporte Excel: " + e.getMessage());
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "Error inesperado al generar reporte EXCEL: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         } finally {
             try {
                 if (rs != null) rs.close();
                 if (pstmt != null) pstmt.close();
-                if (conn != null) conn.close();
             } catch (SQLException e) {
+                System.err.println("Error al cerrar recursos DB: " + e.getMessage());
                 e.printStackTrace();
             }
         }
@@ -283,7 +325,6 @@ public class GenerarReportes extends javax.swing.JFrame {
             try {
                 if (rs != null) rs.close();
                 if (pstmt != null) pstmt.close();
-                if (conn != null) conn.close();
             } catch (SQLException e) {
                 e.printStackTrace();
             }
@@ -315,10 +356,10 @@ public class GenerarReportes extends javax.swing.JFrame {
             }
 
             switch (formatoSeleccionado) {
-                case "WORD":
+                case "DOCX":
                     generarReporteWord(fileToSave);
                     break;
-                case "EXCEL":
+                case "XLSX":
                     generarReporteExcel(fileToSave);
                     break;
                 case "PDF":
@@ -467,12 +508,12 @@ public class GenerarReportes extends javax.swing.JFrame {
     }//GEN-LAST:event_btnGenerarActionPerformed
 
     private void btnWordActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnWordActionPerformed
-        formatoSeleccionado = "WORD";
+        formatoSeleccionado = "DOCX";
         JOptionPane.showMessageDialog(this, "Has seleccionado WORD.", "Formato", JOptionPane.INFORMATION_MESSAGE);
     }//GEN-LAST:event_btnWordActionPerformed
 
     private void btnExcelActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnExcelActionPerformed
-        formatoSeleccionado = "EXCEL";
+        formatoSeleccionado = "XLSX";
         JOptionPane.showMessageDialog(this, "Has seleccionado EXCEL.", "Formato", JOptionPane.INFORMATION_MESSAGE);
     }//GEN-LAST:event_btnExcelActionPerformed
 

@@ -6,17 +6,18 @@ import javax.swing.JOptionPane;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.time.LocalTime;
 
 
 public class WindowBase extends javax.swing.JFrame {
     
-    private Connection conexionBD;
+    private Connection conn;
     private VentanaPrincipal ventanaPrincipal; // Referencia a la ventana principal
     private String nombreCajero;
     
-    public WindowBase(VentanaPrincipal ventanaPrincipal, Connection conexionBD, String nombreCajero) {
+    public WindowBase(VentanaPrincipal ventanaPrincipal, Connection conn, String nombreCajero) {
     this.ventanaPrincipal = ventanaPrincipal;
-    this.conexionBD = conexionBD;
+    this.conn = conn;
     this.nombreCajero = nombreCajero;
     initComponents();
     setLocationRelativeTo(null);
@@ -27,16 +28,42 @@ public class WindowBase extends javax.swing.JFrame {
      PreparedStatement consulta = null;
     try {
         String sql = "INSERT INTO base_diaria (valor_base, usuario_registro, fecha) VALUES (?, ?, ?)";
-        consulta = conexionBD.prepareStatement(sql);
-        consulta.setDouble(1, valorBase);
-        consulta.setString(2, nombreCajero);
-        consulta.setDate(3, java.sql.Date.valueOf(LocalDate.now()));
+        consulta = conn.prepareStatement(sql);
+        
+        LocalDate fechaActual = LocalDate.now();
+        LocalTime horaActual = LocalTime.now();
+            
+        consulta.setDouble(1, valorBase);                               // 1er placeholder en SQL es valor_base
+        consulta.setString(2, this.nombreCajero);                       // 2do placeholder en SQL es usuario_registro
+        consulta.setDate(3, java.sql.Date.valueOf(fechaActual));        // 3er placeholder en SQL es fecha
+
+
         int filasAfectadas = consulta.executeUpdate();
-        // ... (resto del código) ...
+        
+         if (filasAfectadas > 0) {
+                JOptionPane.showMessageDialog(this, "Base diaria registrada correctamente!", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                // Si todo va bien, actualiza la VentanaPrincipal y cierra
+                if (ventanaPrincipal != null) {
+                    ventanaPrincipal.setPresupuestoBase(String.valueOf(valorBase)); // Asegúrate de que este método exista en VentanaPrincipal
+                }
+                dispose(); // Cierra WindowBase
+            } else {
+                JOptionPane.showMessageDialog(this, "Error al registrar la base diaria. Ninguna fila afectada.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+         
     } catch (SQLException e) {
-        System.err.println("Error al guardar la base diaria: " + e.getMessage());
-        JOptionPane.showMessageDialog(WindowBase.this, "Error al guardar la base diaria.", "Error", JOptionPane.ERROR_MESSAGE);
-    } finally {
+        System.err.println("Error SQL al guardar la base diaria: " + e.getMessage());
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Error de base de datos: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+    } catch (NumberFormatException e) {
+            System.err.println("Error de formato numérico: " + e.getMessage());
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Por favor, ingrese un valor numérico válido para la base.", "Error de Formato", JOptionPane.ERROR_MESSAGE);
+        } catch (Exception e) { // Catch genérico para cualquier otro error
+            System.err.println("Error inesperado al guardar la base diaria: " + e.getMessage());
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Ocurrió un error inesperado: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }finally {
         try {
             if (consulta != null) consulta.close();
         } catch (SQLException e) {
@@ -182,6 +209,7 @@ public class WindowBase extends javax.swing.JFrame {
         dispose();
     } catch (NumberFormatException ex) {
         JOptionPane.showMessageDialog(this, "Ingrese un valor numérico válido.", "Error", JOptionPane.ERROR_MESSAGE);
+        ex.printStackTrace();
     }
     }//GEN-LAST:event_btnIngresarPresupuestoActionPerformed
 

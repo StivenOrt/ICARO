@@ -9,23 +9,20 @@ import java.sql.Connection;
 
 public class VentanaPrincipal extends javax.swing.JFrame {
 
-    private Connection conexionBD;
+    private Connection conn;
     private String nombreCajero;
     
     public void setPresupuestoBase(String presupuesto) {
-
-        if (lblPresupuestoBase != null) {
-        lblPresupuestoBase.setText(presupuesto); // Ajusta el texto para que coincida con tu etiqueta
+    if (lblPresupuestoBase != null) {
+        lblPresupuestoBase.setText(presupuesto);
     } else {
         System.err.println("lblPresupuestoBase no está inicializado en VentanaPrincipal.");
     }
-    }
+}
 
     public VentanaPrincipal(Connection conexion, String nombre) {
-        super("Almacén de Ropa");
-        this.conexionBD = conexion;
+        this.conn = conexion;
         this.nombreCajero = nombre;
-
         initComponents();
         lblCajeroEnTurno.setText(this.nombreCajero);
         ajustarBotones();
@@ -39,7 +36,8 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null); // centrado
         setVisible(true);
-    }
+}
+    
     private void ajustarBotones() {
     
     ImageIcon originalIconCaja = new ImageIcon(getClass().getResource("/imagenes/CajaAbierta.png"));
@@ -532,7 +530,7 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     }//GEN-LAST:event_jButton5ActionPerformed
 
     private void jButton4ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton4ActionPerformed
-        Proveedores proveedoresVentana = new Proveedores(this.conexionBD); // ¡Pasa la conexión!
+        Proveedores proveedoresVentana = new Proveedores(this.conn); // ¡Pasa la conexión!
         proveedoresVentana.setVisible(true);
     }//GEN-LAST:event_jButton4ActionPerformed
 
@@ -577,7 +575,7 @@ public class VentanaPrincipal extends javax.swing.JFrame {
 
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
-                
+
             }
         });
     }
