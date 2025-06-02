@@ -302,7 +302,6 @@ public class Inventario extends javax.swing.JFrame {
         btnAgregarProducto = new javax.swing.JButton();
         btnModificarProducto = new javax.swing.JButton();
         btnEliminarProducto = new javax.swing.JButton();
-        btnAgregarMercancia = new javax.swing.JButton();
         jScrollBar1 = new javax.swing.JScrollBar();
         jPanel5 = new javax.swing.JPanel();
         btnOrdenarMayorExistencias = new javax.swing.JButton();
@@ -427,29 +426,18 @@ public class Inventario extends javax.swing.JFrame {
             }
         });
 
-        btnAgregarMercancia.setBackground(new java.awt.Color(0, 0, 51));
-        btnAgregarMercancia.setForeground(new java.awt.Color(255, 255, 255));
-        btnAgregarMercancia.setText("Agregar mercancía");
-        btnAgregarMercancia.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btnAgregarMercanciaActionPerformed(evt);
-            }
-        });
-
         javax.swing.GroupLayout jPanel4Layout = new javax.swing.GroupLayout(jPanel4);
         jPanel4.setLayout(jPanel4Layout);
         jPanel4Layout.setHorizontalGroup(
             jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel4Layout.createSequentialGroup()
-                .addContainerGap(19, Short.MAX_VALUE)
+                .addContainerGap()
                 .addComponent(btnAgregarProducto, javax.swing.GroupLayout.PREFERRED_SIZE, 188, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 148, Short.MAX_VALUE)
                 .addComponent(btnModificarProducto, javax.swing.GroupLayout.PREFERRED_SIZE, 203, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addGap(110, 110, 110)
                 .addComponent(btnEliminarProducto, javax.swing.GroupLayout.PREFERRED_SIZE, 188, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(btnAgregarMercancia, javax.swing.GroupLayout.PREFERRED_SIZE, 177, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(26, 26, 26))
+                .addContainerGap())
         );
         jPanel4Layout.setVerticalGroup(
             jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -458,8 +446,7 @@ public class Inventario extends javax.swing.JFrame {
                 .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(btnAgregarProducto)
                     .addComponent(btnModificarProducto)
-                    .addComponent(btnEliminarProducto)
-                    .addComponent(btnAgregarMercancia))
+                    .addComponent(btnEliminarProducto))
                 .addContainerGap(22, Short.MAX_VALUE))
         );
 
@@ -576,7 +563,7 @@ public class Inventario extends javax.swing.JFrame {
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 513, Short.MAX_VALUE)
+            .addGap(0, 517, Short.MAX_VALUE)
             .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                 .addGroup(jPanel1Layout.createSequentialGroup()
                     .addContainerGap()
@@ -638,10 +625,6 @@ public class Inventario extends javax.swing.JFrame {
         reporteFrame.setVisible(true); // Hace visible la ventana de reportes
     }//GEN-LAST:event_btnGenerarReporteActionPerformed
 
-    private void btnAgregarMercanciaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnAgregarMercanciaActionPerformed
-        new FacturaInventario().setVisible(true);
-    }//GEN-LAST:event_btnAgregarMercanciaActionPerformed
-
     private void btnAgregarProductoActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnAgregarProductoActionPerformed
         new NuevoProducto().setVisible(true);
     }//GEN-LAST:event_btnAgregarProductoActionPerformed
@@ -669,7 +652,6 @@ public class Inventario extends javax.swing.JFrame {
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton btnActualizarTabla;
-    private javax.swing.JButton btnAgregarMercancia;
     private javax.swing.JButton btnAgregarProducto;
     private javax.swing.JButton btnEliminarProducto;
     private javax.swing.JButton btnGenerarReporte;
