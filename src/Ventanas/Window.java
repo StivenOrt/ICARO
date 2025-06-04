@@ -16,6 +16,21 @@ public class Window extends javax.swing.JFrame {
         initComponents();
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        
+        this.getRootPane().setDefaultButton(jButton1);
+        
+        campo_usuario.addActionListener(new java.awt.event.ActionListener() {
+        public void actionPerformed(java.awt.event.ActionEvent evt) {
+            jButton1ActionPerformed(evt); // Llama al método del botón "Entrar"
+        }
+    });
+
+    // Añadir ActionListener a campo_pass para que al presionar Enter se ejecute la acción del botón
+    campo_pass.addActionListener(new java.awt.event.ActionListener() {
+        public void actionPerformed(java.awt.event.ActionEvent evt) {
+            jButton1ActionPerformed(evt); // Llama al método del botón "Entrar"
+        }
+    });
     }
     
     @SuppressWarnings("unchecked")
@@ -189,10 +204,10 @@ public class Window extends javax.swing.JFrame {
                 String nombreCajero = resultado.getString("Nombre");
                 
                 if ("Administrador".equals(rolUsuario)) {
-                    VentanaPrincipal ventanaPrincipal = new VentanaPrincipal(conn, nombreCajero); // ¡Pasa la conexión!
+                    VentanaPrincipal ventanaPrincipal = new VentanaPrincipal(conn, nombreCajero, idUsuarioLogueado); // ¡Pasa la conexión!
                     ventanaPrincipal.setVisible(true);
                 } else if ("Cajero".equals(rolUsuario)) {
-                    VentanaPrincipal ventanaPrincipal = new VentanaPrincipal(conn, nombreCajero); // ¡Pasa la conexión!
+                    VentanaPrincipal ventanaPrincipal = new VentanaPrincipal(conn, nombreCajero, idUsuarioLogueado); // ¡Pasa la conexión!
                     ventanaPrincipal.setVisible(true);
                     
                     WindowBase windowBase = new WindowBase(ventanaPrincipal, this.conn, nombreCajero);

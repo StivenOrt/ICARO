@@ -1,14 +1,70 @@
 package Ventanas;
 
 import javax.swing.JFrame;
+import javax.swing.JOptionPane;
+import javax.swing.table.DefaultTableModel; // Importar DefaultTableModel
+import java.sql.Connection; // Importar Connection
+import java.sql.PreparedStatement; // Importar PreparedStatement
+import java.sql.ResultSet; // Importar ResultSet
+import java.sql.SQLException; // Importar SQLException
+import java.sql.Timestamp; // Importar Timestamp
+import java.util.Date; // Importar Date
 
 public class Interfazcobro extends javax.swing.JFrame {
+    
+   private double totalVentaActual;
+    private int idCajeroActual; // Añadido
+    private Connection conn; // Añadido: Para la conexión a la base de datos
+    private DefaultTableModel tablaProductosModel; // Añadido: Para los productos en el carrito
+    
+    public Interfazcobro (double totalAPagar, int idCajero, Connection conexion, DefaultTableModel productosModel) {
+        initComponents(); // Inicializa los componentes de la UI
+        setLocationRelativeTo(null); // Centra la ventana
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE); // Cierra solo esta ventana
 
+        // Asigna los valores recibidos a los atributos de la clase
+        this.totalVentaActual = totalAPagar;
+        this.idCajeroActual = idCajero;
+        this.conn = conexion; // Asigna la conexión pasada desde VentanaPrincipal
+        this.tablaProductosModel = productosModel;
+
+        // Configura los campos de texto
+        txtTotalAPagar.setText(String.format("%.2f", totalAPagar));
+        txtTotalAPagar.setEditable(false); // No permite editar el total
+        txtCambio.setEditable(false);      // No permite editar el cambio
+
+        // Enfoca el campo de entrada de pago
+        txtPagoCon.requestFocusInWindow();
+
+        // Añade listeners para calcular el cambio automáticamente
+        txtPagoCon.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                calcularCambio();
+            }
+        });
+        txtPagoCon.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyReleased(java.awt.event.KeyEvent evt) {
+                calcularCambio();
+            }
+        });
+    }
+    
     public Interfazcobro() {
         initComponents();
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
     }
+    
+    private void calcularCambio() {
+        try {
+            double pagoCliente = Double.parseDouble(txtPagoCon.getText());
+            double cambio = pagoCliente - totalVentaActual;
+            txtCambio.setText(String.format("%.2f", cambio));
+        } catch (NumberFormatException e) {
+            txtCambio.setText("Inválido");
+        }
+    }
+    
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
@@ -24,11 +80,11 @@ public class Interfazcobro extends javax.swing.JFrame {
         jButton5 = new javax.swing.JButton();
         jButton6 = new javax.swing.JButton();
         jLabel2 = new javax.swing.JLabel();
-        textfield1 = new java.awt.TextField();
+        txtPagoCon = new java.awt.TextField();
         jLabel3 = new javax.swing.JLabel();
         jLabel4 = new javax.swing.JLabel();
-        jTextField1 = new javax.swing.JTextField();
-        jLabel1 = new javax.swing.JLabel();
+        txtTotalAPagar = new javax.swing.JTextField();
+        txtCambio = new java.awt.TextField();
 
         jToggleButton1.setText("jToggleButton1");
 
@@ -103,6 +159,11 @@ public class Interfazcobro extends javax.swing.JFrame {
         jButton4.setMaximumSize(new java.awt.Dimension(100, 23));
         jButton4.setMinimumSize(new java.awt.Dimension(100, 23));
         jButton4.setPreferredSize(new java.awt.Dimension(100, 23));
+        jButton4.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton4ActionPerformed(evt);
+            }
+        });
 
         jButton5.setBackground(new java.awt.Color(217, 217, 217));
         jButton5.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
@@ -111,9 +172,6 @@ public class Interfazcobro extends javax.swing.JFrame {
         jButton6.setBackground(new java.awt.Color(217, 217, 217));
         jButton6.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
         jButton6.setText("Otra compra");
-        jButton6.setMaximumSize(new java.awt.Dimension(100, 23));
-        jButton6.setMinimumSize(new java.awt.Dimension(100, 23));
-        jButton6.setPreferredSize(new java.awt.Dimension(100, 23));
         jButton6.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jButton6ActionPerformed(evt);
@@ -124,12 +182,12 @@ public class Interfazcobro extends javax.swing.JFrame {
         jLabel2.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         jLabel2.setText("Total a cobrar:");
 
-        textfield1.setBackground(new java.awt.Color(204, 204, 204));
-        textfield1.setCursor(new java.awt.Cursor(java.awt.Cursor.TEXT_CURSOR));
-        textfield1.setName(""); // NOI18N
-        textfield1.addActionListener(new java.awt.event.ActionListener() {
+        txtPagoCon.setBackground(new java.awt.Color(204, 204, 204));
+        txtPagoCon.setCursor(new java.awt.Cursor(java.awt.Cursor.TEXT_CURSOR));
+        txtPagoCon.setName(""); // NOI18N
+        txtPagoCon.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                textfield1ActionPerformed(evt);
+                txtPagoConActionPerformed(evt);
             }
         });
 
@@ -139,12 +197,21 @@ public class Interfazcobro extends javax.swing.JFrame {
         jLabel4.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         jLabel4.setText("Cambio: ");
 
-        jTextField1.setBackground(new java.awt.Color(228, 228, 228));
+        txtTotalAPagar.setBackground(new java.awt.Color(228, 228, 228));
+        txtTotalAPagar.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                txtTotalAPagarActionPerformed(evt);
+            }
+        });
 
-        jLabel1.setBackground(new java.awt.Color(204, 204, 204));
-        jLabel1.setLabelFor(jButton3);
-        jLabel1.setToolTipText("");
-        jLabel1.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 0, 0)));
+        txtCambio.setBackground(new java.awt.Color(204, 204, 204));
+        txtCambio.setCursor(new java.awt.Cursor(java.awt.Cursor.TEXT_CURSOR));
+        txtCambio.setName(""); // NOI18N
+        txtCambio.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                txtCambioActionPerformed(evt);
+            }
+        });
 
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
@@ -166,24 +233,19 @@ public class Interfazcobro extends javax.swing.JFrame {
                         .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addGroup(jPanel1Layout.createSequentialGroup()
                                 .addGap(87, 87, 87)
-                                .addComponent(jLabel4)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED))
+                                .addComponent(jLabel4))
                             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
                                         .addComponent(jLabel3)
                                         .addGap(24, 24, 24))
-                                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
-                                        .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)))))
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addGroup(jPanel1Layout.createSequentialGroup()
-                                .addGap(4, 4, 4)
-                                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                    .addComponent(jTextField1, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                    .addComponent(textfield1, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                            .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 104, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                    .addComponent(jLabel2, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE))))
+                        .addGap(4, 4, 4)
+                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                            .addComponent(txtTotalAPagar, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(txtPagoCon, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(txtCambio, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE))
                         .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))
         );
         jPanel1Layout.setVerticalGroup(
@@ -195,16 +257,16 @@ public class Interfazcobro extends javax.swing.JFrame {
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
                 .addGap(32, 32, 32)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(txtTotalAPagar, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jLabel2))
                 .addGap(19, 19, 19)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addComponent(textfield1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(txtPagoCon, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, 25, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGap(24, 24, 24)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 20, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jLabel4))
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                    .addComponent(jLabel4)
+                    .addComponent(txtCambio, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGap(28, 28, 28)
                 .addComponent(jButton3, javax.swing.GroupLayout.PREFERRED_SIZE, 32, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(18, 18, 18)
@@ -220,21 +282,17 @@ public class Interfazcobro extends javax.swing.JFrame {
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 643, Short.MAX_VALUE)
-            .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                .addGroup(layout.createSequentialGroup()
-                    .addContainerGap()
-                    .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
+            .addGroup(layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 405, Short.MAX_VALUE)
-            .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                .addGroup(layout.createSequentialGroup()
-                    .addContainerGap()
-                    .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addContainerGap()))
+            .addGroup(layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addContainerGap())
         );
 
         pack();
@@ -248,17 +306,169 @@ public class Interfazcobro extends javax.swing.JFrame {
         // TODO add your handling code here:
     }//GEN-LAST:event_jButton1ActionPerformed
 
-    private void textfield1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_textfield1ActionPerformed
+    private void txtPagoConActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txtPagoConActionPerformed
         // TODO add your handling code here:
-    }//GEN-LAST:event_textfield1ActionPerformed
+    }//GEN-LAST:event_txtPagoConActionPerformed
 
     private void jButton6ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton6ActionPerformed
         // TODO add your handling code here:
     }//GEN-LAST:event_jButton6ActionPerformed
 
     private void jButton3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton3ActionPerformed
-        jButton3.addActionListener(e -> new Interfazpagoconfirm().setVisible(true));
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+        int idVentaGenerado = -1; // Usaremos INT porque en la DB es INT AUTO_INCREMENT
+
+        try {
+            double pagoCliente = Double.parseDouble(txtPagoCon.getText());
+            if (pagoCliente < totalVentaActual) {
+                JOptionPane.showMessageDialog(this, "El pago es insuficiente. Faltan: " + String.format("%.2f", (totalVentaActual - pagoCliente)), "Pago Insuficiente", JOptionPane.WARNING_MESSAGE);
+                return; // No proceder si el pago es insuficiente
+            }
+
+            conn.setAutoCommit(false); // Deshabilita el auto-commit
+
+            // 1. Obtener o Registrar el IdCliente
+            String idClienteParaVenta;
+            String nombreCliente = JOptionPane.showInputDialog(this, "Ingrese el nombre del cliente (dejar vacío para cliente genérico):");
+
+            if (nombreCliente == null || nombreCliente.trim().isEmpty()) {
+
+                idClienteParaVenta = "CLIENTE_GENERICO";
+            } else {
+                // Opción B: Buscar cliente por nombre, si no existe, registrarlo
+                String selectClienteSQL = "SELECT IdCliente FROM cliente WHERE Nombre = ?";
+                pstmt = conn.prepareStatement(selectClienteSQL);
+                pstmt.setString(1, nombreCliente.trim());
+                rs = pstmt.executeQuery();
+
+                if (rs.next()) {
+                    // Cliente existente, obtener su IdCliente
+                    idClienteParaVenta = rs.getString("IdCliente");
+                } else {
+                    // Cliente no existe, REGISTRARLO
+                    // Genera un nuevo IdCliente (Ejemplo: con un prefijo y timestamp para asegurar unicidad)
+                    idClienteParaVenta = "CLI_" + System.currentTimeMillis();
+                    String insertClienteSQL = "INSERT INTO cliente (IdCliente, Nombre) VALUES (?, ?)";
+                    PreparedStatement pstmtInsertCliente = conn.prepareStatement(insertClienteSQL);
+                    pstmtInsertCliente.setString(1, idClienteParaVenta);
+                    pstmtInsertCliente.setString(2, nombreCliente.trim());
+                    pstmtInsertCliente.executeUpdate();
+                    pstmtInsertCliente.close(); // Cerrar el PreparedStatement específico para insertar cliente
+                    JOptionPane.showMessageDialog(this, "Nuevo cliente '" + nombreCliente + "' registrado con ID: " + idClienteParaVenta, "Cliente Registrado", JOptionPane.INFORMATION_MESSAGE);
+                }
+                rs.close();
+                pstmt.close(); // Cerrar el PreparedStatement de selección de cliente
+            }
+
+            // 2. Insertar la venta en la tabla 'venta'
+            String insertVentaSQL = "INSERT INTO venta (Fecha, IdCliente, Total, IdUsuario) VALUES (?, ?, ?, ?)";
+            pstmt = conn.prepareStatement(insertVentaSQL, PreparedStatement.RETURN_GENERATED_KEYS);
+            pstmt.setTimestamp(1, new Timestamp(new Date().getTime())); // Fecha y hora actuales
+            pstmt.setString(2, idClienteParaVenta); // Usamos el IdCliente obtenido/registrado
+            pstmt.setDouble(3, totalVentaActual);
+            pstmt.setInt(4, idCajeroActual);
+            pstmt.executeUpdate();
+
+            rs = pstmt.getGeneratedKeys();
+            if (rs.next()) {
+                idVentaGenerado = rs.getInt(1); // Obtener el ID de la venta generada
+            } else {
+                throw new SQLException("No se pudo obtener el IdVenta generado después de insertar la venta.");
+            }
+            rs.close();
+            pstmt.close(); // Cerrar el PreparedStatement de venta
+
+            // 3. Insertar los detalles de la venta en la tabla 'detalleventa'
+            String insertDetalleSQL = "INSERT INTO detalleventa (IdVenta, IdProducto, Cantidad, PrecioUnitario, Subtotal) VALUES (?, ?, ?, ?, ?)";
+            pstmt = conn.prepareStatement(insertDetalleSQL);
+
+            for (int i = 0; i < tablaProductosModel.getRowCount(); i++) {
+
+                String idProducto = tablaProductosModel.getValueAt(i, 1).toString(); // "Código"
+                int cantidad = Integer.parseInt(tablaProductosModel.getValueAt(i, 3).toString()); // "Cantidad"
+                double precioUnitario = Double.parseDouble(tablaProductosModel.getValueAt(i, 4).toString()); // "Precio unitario"
+                double subtotal = Double.parseDouble(tablaProductosModel.getValueAt(i, 5).toString()); // "Subtotal"
+
+                pstmt.setInt(1, idVentaGenerado);
+                pstmt.setString(2, idProducto); // IdProducto es VARCHAR(50)
+                pstmt.setInt(3, cantidad);
+                pstmt.setDouble(4, precioUnitario);
+                pstmt.setDouble(5, subtotal);
+                pstmt.addBatch(); // Añadir al lote
+            }
+            pstmt.executeBatch(); // Ejecutar todas las inserciones de detalles
+            pstmt.close(); // Cerrar el PreparedStatement de detalle de venta
+
+            // 4. Actualizar el stock de productos
+            String updateStockSQL = "UPDATE producto SET Stock = Stock - ? WHERE IdProducto = ?";
+            pstmt = conn.prepareStatement(updateStockSQL);
+            for (int i = 0; i < tablaProductosModel.getRowCount(); i++) {
+                String idProducto = tablaProductosModel.getValueAt(i, 1).toString();
+                int cantidadVendida = Integer.parseInt(tablaProductosModel.getValueAt(i, 3).toString());
+                pstmt.setInt(1, cantidadVendida);
+                pstmt.setString(2, idProducto);
+                pstmt.addBatch();
+            }
+            pstmt.executeBatch();
+            pstmt.close(); // Cerrar el PreparedStatement de actualización de stock
+
+            JOptionPane.showMessageDialog(this, "Venta registrada exitosamente. ID de Venta: " + idVentaGenerado + ". Cambio: " + txtCambio.getText(), "Venta Exitosa", JOptionPane.INFORMATION_MESSAGE);
+
+            // Cierra esta ventana de cobro
+            this.dispose();
+
+        } catch (SQLException ex) {
+            // Si ocurre algún error en la base de datos, intentar revertir la transacción
+            try {
+                if (conn != null) {
+                    conn.rollback(); // Deshacer todos los cambios de la transacción
+                    JOptionPane.showMessageDialog(this, "Error al registrar la venta. La transacción fue revertida: " + ex.getMessage(), "Error de Transacción", JOptionPane.ERROR_MESSAGE);
+                }
+            } catch (SQLException rollbackEx) {
+                System.err.println("Error al realizar rollback: " + rollbackEx.getMessage());
+            }
+            System.err.println("Error en Interfazcobro al registrar la venta: " + ex.getMessage());
+            JOptionPane.showMessageDialog(this, "Error al registrar la venta: " + ex.getMessage(), "Error de Base de Datos", JOptionPane.ERROR_MESSAGE);
+            ex.printStackTrace();
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "Por favor, ingresa un valor numérico válido para el pago.", "Pago Inválido", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
+        } finally {
+            // Asegurarse de cerrar los PreparedStatements y restaurar el auto-commit
+            try {
+                if (rs != null) rs.close();
+                if (pstmt != null) pstmt.close();
+                if (conn != null) conn.setAutoCommit(true); // Restaurar el modo auto-commit de la conexión
+                // ¡IMPORTANTE!: No cierres la conexión 'conn' aquí, porque la recibiste de VentanaPrincipal
+                // y es probable que VentanaPrincipal la necesite para otras operaciones.
+                // La conexión debe cerrarse al finalizar la aplicación.
+            } catch (SQLException closeEx) {
+                System.err.println("Error al cerrar recursos en Interfazcobro: " + closeEx.getMessage());
+            }
+        }
     }//GEN-LAST:event_jButton3ActionPerformed
+
+    private void txtTotalAPagarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txtTotalAPagarActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_txtTotalAPagarActionPerformed
+
+    private void txtCambioActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txtCambioActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_txtCambioActionPerformed
+
+    private void jButton4ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton4ActionPerformed
+        // Muestra un mensaje de confirmación antes de cancelar
+    int confirm = JOptionPane.showConfirmDialog(this,
+                            "Esta seguro que desea cancelar el cobro? La venta no será registrada.",
+                            "Confirmar Cancelación",
+                            JOptionPane.YES_NO_OPTION,
+                            JOptionPane.WARNING_MESSAGE);
+
+    if (confirm == JOptionPane.YES_OPTION) {
+        this.dispose(); // Cierra la ventana de Interfazcobro
+    }
+    }//GEN-LAST:event_jButton4ActionPerformed
 
     public static void main(String args[]) {
 
@@ -277,14 +487,14 @@ public class Interfazcobro extends javax.swing.JFrame {
     private javax.swing.JButton jButton4;
     private javax.swing.JButton jButton5;
     private javax.swing.JButton jButton6;
-    private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
     private javax.swing.JLabel jLabel4;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;
-    private javax.swing.JTextField jTextField1;
     private javax.swing.JToggleButton jToggleButton1;
-    private java.awt.TextField textfield1;
+    private java.awt.TextField txtCambio;
+    private java.awt.TextField txtPagoCon;
+    private javax.swing.JTextField txtTotalAPagar;
     // End of variables declaration//GEN-END:variables
 }

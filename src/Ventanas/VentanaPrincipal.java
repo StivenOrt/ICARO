@@ -6,23 +6,26 @@ import javax.swing.ImageIcon;
 import javax.swing.JFrame;
 import javax.swing.SwingConstants;
 import java.sql.Connection;
+import javax.swing.JOptionPane;
+import java.sql.PreparedStatement;
+import javax.swing.table.DefaultTableModel;
+import java.sql.SQLException;
+import java.sql.ResultSet;
+import java.sql.Timestamp;
+import java.util.Date;
 
 public class VentanaPrincipal extends javax.swing.JFrame {
 
     private Connection conn;
     private String nombreCajero;
+    private int numeroProductoCarrito = 1;
+    private double totalVenta = 0.0;
+    private int idCajeroActual;
     
-    public void setPresupuestoBase(String presupuesto) {
-    if (lblPresupuestoBase != null) {
-        lblPresupuestoBase.setText(presupuesto);
-    } else {
-        System.err.println("lblPresupuestoBase no está inicializado en VentanaPrincipal.");
-    }
-}
-
-    public VentanaPrincipal(Connection conexion, String nombre) {
+    public VentanaPrincipal(Connection conexion, String nombre, int idUsuarioLogeado) {
         this.conn = conexion;
         this.nombreCajero = nombre;
+        this.idCajeroActual = idUsuarioLogeado;
         initComponents();
         lblCajeroEnTurno.setText(this.nombreCajero);
         ajustarBotones();
@@ -37,6 +40,106 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         setLocationRelativeTo(null); // centrado
         setVisible(true);
 }
+    
+    public void setPresupuestoBase(String presupuesto) {
+    if (lblPresupuestoBase != null) {
+        lblPresupuestoBase.setText(presupuesto);
+    } else {
+        System.err.println("lblPresupuestoBase no está inicializado en VentanaPrincipal.");
+    }
+    }
+    
+    private void agregarProductoACarrito() {
+        String codigoProducto = jTextFieldBusqueda.getText().trim();
+        String cantidadTexto = jTextFieldCantidad.getText().trim();
+
+        if (codigoProducto.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Por favor, ingresa el código del producto.", "Campo Vacío", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        int cantidad;
+        try {
+            cantidad = Integer.parseInt(cantidadTexto);
+            if (cantidad <= 0) {
+                JOptionPane.showMessageDialog(this, "La cantidad debe ser un número positivo.", "Cantidad Inválida", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "Por favor, ingresa una cantidad válida (solo números).", "Cantidad Inválida", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        String sql = "SELECT Nombre, Precio, Stock FROM producto WHERE IdProducto = ?";
+        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setString(1, codigoProducto);
+            ResultSet rs = pst.executeQuery();
+
+            if (rs.next()) {
+                String nombreProducto = rs.getString("Nombre");
+                double precioUnitario = rs.getDouble("Precio");
+                int stockDisponible = rs.getInt("Stock");
+
+                if (cantidad > stockDisponible) {
+                    JOptionPane.showMessageDialog(this, "No hay suficiente stock para " + nombreProducto + ".\nStock disponible: " + stockDisponible, "Stock Insuficiente", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+
+                DefaultTableModel model = (DefaultTableModel) Tabla.getModel();
+                double subtotal = precioUnitario * cantidad;
+
+                boolean productoEncontradoEnCarrito = false;
+                for (int i = 0; i < model.getRowCount(); i++) {
+                    String codigoEnTabla = model.getValueAt(i, 1).toString(); // Columna "Código" (Índice 1)
+                    if (codigoEnTabla.equals(codigoProducto)) {
+                        int cantidadActual = (int) model.getValueAt(i, 3);
+                        double subtotalActual = (double) model.getValueAt(i, 5);
+
+                        int nuevaCantidad = cantidadActual + cantidad;
+                        double nuevoSubtotal = subtotalActual + subtotal;
+
+                        model.setValueAt(nuevaCantidad, i, 3);
+                        model.setValueAt(nuevoSubtotal, i, 5);
+                        productoEncontradoEnCarrito = true;
+                        
+                        // Solo actualiza el total de la venta con el subtotal del nuevo producto
+                        totalVenta += subtotal; 
+                        break;
+                    }
+                }
+
+                if (!productoEncontradoEnCarrito) {
+                    model.addRow(new Object[]{numeroProductoCarrito, codigoProducto, nombreProducto, cantidad, precioUnitario, subtotal});
+                    numeroProductoCarrito++;
+                    totalVenta += subtotal;
+                }
+                
+                String updateStockSql = "UPDATE producto SET Stock = Stock - ? WHERE IdProducto = ?";
+                try (PreparedStatement updatePst = conn.prepareStatement(updateStockSql)) {
+                    updatePst.setInt(1, cantidad);
+                    updatePst.setString(2, codigoProducto);
+                    updatePst.executeUpdate();
+                }
+
+                jTextFieldTotalVenta.setText(String.format("%.2f", totalVenta));
+                jTextFieldBusqueda.setText("");
+                jTextFieldCantidad.setText("1");
+                jTextFieldBusqueda.requestFocusInWindow();
+
+            } else {
+                JOptionPane.showMessageDialog(this, "Producto con código '" + codigoProducto + "' no encontrado en el inventario.", "Producto No Encontrado", JOptionPane.INFORMATION_MESSAGE);
+                jTextFieldBusqueda.setText("");
+                jTextFieldCantidad.setText("1");
+                jTextFieldBusqueda.requestFocusInWindow();
+            }
+
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, "Error al buscar o actualizar el producto en la base de datos: " + ex.getMessage(), "Error de Base de Datos", JOptionPane.ERROR_MESSAGE);
+            ex.printStackTrace();
+        }
+    }
+
+    
     
     private void ajustarBotones() {
     
@@ -129,6 +232,24 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         System.exit(0);
     }
     
+    private void reajustarNumeroProductoCarrito() {
+    DefaultTableModel model = (DefaultTableModel) Tabla.getModel();
+    for (int i = 0; i < model.getRowCount(); i++) {
+        model.setValueAt(i + 1, i, 0); // Columna "No. Producto" (Índice 0)
+    }
+    // Asegurarse de que el numeroProductoCarrito global refleje la cuenta actual + 1 para el siguiente
+    numeroProductoCarrito = model.getRowCount() + 1;
+    }
+    
+    public void vaciarCarritoYReiniciar() {
+    DefaultTableModel model = (DefaultTableModel) Tabla.getModel();
+    model.setRowCount(0); // Vaciar la tabla del carrito
+    totalVenta = 0.0; // Resetear el total de la venta
+    jTextFieldTotalVenta.setText(String.format("%.2f", totalVenta)); // Actualizar el campo de total visual
+    numeroProductoCarrito = 1; // Resetear el contador para la columna "No. Producto"
+    jTextFieldBusqueda.setText("");
+    jTextFieldBusqueda.requestFocusInWindow(); // Volver a enfocar el campo de búsqueda
+}    
 
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
@@ -145,14 +266,15 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         jButton6 = new javax.swing.JButton();
         jButton8 = new javax.swing.JButton();
         CodigoProducto = new javax.swing.JLabel();
-        jTextField1 = new javax.swing.JTextField();
+        jTextFieldBusqueda = new javax.swing.JTextField();
         Cantidad = new javax.swing.JLabel();
         VentaRopa = new javax.swing.JPanel();
         jLabel1 = new javax.swing.JLabel();
-        jTextField3 = new javax.swing.JTextField();
+        jTextFieldCantidad = new javax.swing.JTextField();
         jLabel4 = new javax.swing.JLabel();
         lblPresupuestoBase = new javax.swing.JLabel();
         Minipanel = new javax.swing.JPanel();
+        Agregar = new javax.swing.JButton();
         PanelInferior = new javax.swing.JPanel();
         jButton9 = new javax.swing.JButton();
         jButton10 = new javax.swing.JButton();
@@ -162,7 +284,7 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         jLabel2 = new javax.swing.JLabel();
         jLabel3 = new javax.swing.JLabel();
         lblCajeroEnTurno = new javax.swing.JLabel();
-        jTextField2 = new javax.swing.JTextField();
+        jTextFieldTotalVenta = new javax.swing.JTextField();
         jScrollPane1 = new javax.swing.JScrollPane();
         Tabla = new javax.swing.JTable();
 
@@ -249,9 +371,9 @@ public class VentanaPrincipal extends javax.swing.JFrame {
 
         CodigoProducto.setText("Código producto");
 
-        jTextField1.addActionListener(new java.awt.event.ActionListener() {
+        jTextFieldBusqueda.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jTextField1ActionPerformed(evt);
+                jTextFieldBusquedaActionPerformed(evt);
             }
         });
 
@@ -278,9 +400,9 @@ public class VentanaPrincipal extends javax.swing.JFrame {
             .addComponent(jLabel1, javax.swing.GroupLayout.DEFAULT_SIZE, 22, Short.MAX_VALUE)
         );
 
-        jTextField3.addActionListener(new java.awt.event.ActionListener() {
+        jTextFieldCantidad.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jTextField3ActionPerformed(evt);
+                jTextFieldCantidadActionPerformed(evt);
             }
         });
 
@@ -303,6 +425,17 @@ public class VentanaPrincipal extends javax.swing.JFrame {
             .addGap(0, 23, Short.MAX_VALUE)
         );
 
+        Agregar.setBackground(new java.awt.Color(0, 102, 255));
+        Agregar.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
+        Agregar.setForeground(new java.awt.Color(255, 255, 255));
+        Agregar.setText("Agregar");
+        Agregar.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 0, 0)));
+        Agregar.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                AgregarActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout PanelSuperiorLayout = new javax.swing.GroupLayout(PanelSuperior);
         PanelSuperior.setLayout(PanelSuperiorLayout);
         PanelSuperiorLayout.setHorizontalGroup(
@@ -321,12 +454,14 @@ public class VentanaPrincipal extends javax.swing.JFrame {
                         .addGap(18, 18, 18)
                         .addComponent(CodigoProducto)
                         .addGap(12, 12, 12)
-                        .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, 131, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(jTextFieldBusqueda, javax.swing.GroupLayout.PREFERRED_SIZE, 131, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(58, 58, 58)
                         .addComponent(Cantidad)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addComponent(jTextField3, javax.swing.GroupLayout.PREFERRED_SIZE, 87, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(602, 602, 602)
+                        .addComponent(jTextFieldCantidad, javax.swing.GroupLayout.PREFERRED_SIZE, 87, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(80, 80, 80)
+                        .addComponent(Agregar, javax.swing.GroupLayout.PREFERRED_SIZE, 84, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(435, 435, 435)
                         .addComponent(jLabel4)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(lblPresupuestoBase, javax.swing.GroupLayout.PREFERRED_SIZE, 111, javax.swing.GroupLayout.PREFERRED_SIZE))
@@ -341,7 +476,7 @@ public class VentanaPrincipal extends javax.swing.JFrame {
                         .addComponent(jButton5, javax.swing.GroupLayout.PREFERRED_SIZE, 89, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(18, 18, 18)
                         .addComponent(jButton6, javax.swing.GroupLayout.PREFERRED_SIZE, 84, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addContainerGap(668, Short.MAX_VALUE))
+                .addContainerGap(671, Short.MAX_VALUE))
         );
         PanelSuperiorLayout.setVerticalGroup(
             PanelSuperiorLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -369,13 +504,14 @@ public class VentanaPrincipal extends javax.swing.JFrame {
                         .addGap(6, 6, 6)
                         .addGroup(PanelSuperiorLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addGroup(PanelSuperiorLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                                .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addComponent(jTextFieldBusqueda, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addComponent(CodigoProducto))
                             .addGroup(PanelSuperiorLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                                 .addComponent(Cantidad)
-                                .addComponent(jTextField3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))))
+                                .addComponent(jTextFieldCantidad, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addComponent(Agregar, javax.swing.GroupLayout.PREFERRED_SIZE, 23, javax.swing.GroupLayout.PREFERRED_SIZE))))
                     .addComponent(jLabel4, javax.swing.GroupLayout.PREFERRED_SIZE, 31, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(12, 12, 12)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(Minipanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
@@ -438,7 +574,7 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         jButton13.setBackground(new java.awt.Color(0, 0, 102));
         jButton13.setFont(new java.awt.Font("Segoe UI", 1, 22)); // NOI18N
         jButton13.setForeground(new java.awt.Color(255, 255, 255));
-        jButton13.setText("F12 - Cobrar");
+        jButton13.setText("Cobrar");
         jButton13.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 0, 0), 2));
         jButton13.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -463,31 +599,28 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         lblCajeroEnTurno.setText("jLabel4");
         PanelInferior.add(lblCajeroEnTurno, new org.netbeans.lib.awtextra.AbsoluteConstraints(220, 90, 164, 50));
 
-        jTextField2.addActionListener(new java.awt.event.ActionListener() {
+        jTextFieldTotalVenta.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jTextField2ActionPerformed(evt);
+                jTextFieldTotalVentaActionPerformed(evt);
             }
         });
-        PanelInferior.add(jTextField2, new org.netbeans.lib.awtextra.AbsoluteConstraints(1140, 30, 190, 80));
+        PanelInferior.add(jTextFieldTotalVenta, new org.netbeans.lib.awtextra.AbsoluteConstraints(1140, 30, 190, 80));
 
         jPanelPrincipal.add(PanelInferior, java.awt.BorderLayout.PAGE_END);
 
         Tabla.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
-                {null, null, null, null, null},
-                {null, null, null, null, null},
-                {null, null, null, null, null},
-                {null, null, null, null, null}
+
             },
             new String [] {
-                "No. Producto", "Código", "Nombre", "Cantidad", "Precio"
+                "No. Producto", "Código", "Nombre", "Cantidad", "Precio unitario", "Subtotal"
             }
         ) {
             Class[] types = new Class [] {
-                java.lang.Byte.class, java.lang.Byte.class, java.lang.String.class, java.lang.Byte.class, java.lang.Double.class
+                java.lang.Byte.class, java.lang.Byte.class, java.lang.String.class, java.lang.Byte.class, java.lang.Double.class, java.lang.Double.class
             };
             boolean[] canEdit = new boolean [] {
-                false, false, false, false, false
+                false, false, false, false, false, false
             };
 
             public Class getColumnClass(int columnIndex) {
@@ -508,13 +641,13 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
-    private void jTextField3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField3ActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jTextField3ActionPerformed
+    private void jTextFieldCantidadActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextFieldCantidadActionPerformed
+        agregarProductoACarrito();
+    }//GEN-LAST:event_jTextFieldCantidadActionPerformed
 
-    private void jTextField1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField1ActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jTextField1ActionPerformed
+    private void jTextFieldBusquedaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextFieldBusquedaActionPerformed
+        agregarProductoACarrito();
+    }//GEN-LAST:event_jTextFieldBusquedaActionPerformed
 
     private void jButton8ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton8ActionPerformed
         new Window().setVisible(true); // Abrir la ventana de inicio de sesión
@@ -542,9 +675,9 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         new Inventario().setVisible(true);
     }//GEN-LAST:event_jButton2ActionPerformed
 
-    private void jTextField2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField2ActionPerformed
+    private void jTextFieldTotalVentaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextFieldTotalVentaActionPerformed
         // TODO add your handling code here:
-    }//GEN-LAST:event_jTextField2ActionPerformed
+    }//GEN-LAST:event_jTextFieldTotalVentaActionPerformed
 
     private void jButton13KeyPressed(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_jButton13KeyPressed
         if (evt.getKeyCode() == java.awt.event.KeyEvent.VK_F12) {
@@ -552,7 +685,44 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     }//GEN-LAST:event_jButton13KeyPressed
 
     private void jButton13ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton13ActionPerformed
-        new Interfazcobro().setVisible(true);
+        DefaultTableModel model = (DefaultTableModel) Tabla.getModel();
+
+// 1. Verificar si hay productos en el carrito (ESTO SE CONSERVA)
+if (model.getRowCount() == 0) {
+    JOptionPane.showMessageDialog(this, "El carrito de compras está vacío. Agrega productos para cobrar.", "Carrito Vacío", JOptionPane.WARNING_MESSAGE);
+    return; // Salir del método si no hay productos
+}
+
+// 2. Verificar que el ID del cajero esté disponible (ESTO SE CONSERVA)
+// idCajeroActual debe ser inicializado en el constructor de VentanaPrincipal
+// con el método obtenerIdCajeroActual() como discutimos.
+if (idCajeroActual == -1) { // -1 es el valor por defecto si no se encontró el cajero
+    JOptionPane.showMessageDialog(this, "No se pudo identificar al cajero en turno. La venta no puede ser registrada. Asegúrate de que el usuario 'admin' exista en la base de datos.", "Error de Cajero", JOptionPane.ERROR_MESSAGE);
+    return; // Salir del método si el cajero no es válido
+}
+
+// 3. Confirmar la venta con el usuario (ESTO SE CONSERVA, pero cambia su PROPÓSITO)
+// Ahora, la confirmación es para *abrir la ventana de cobro*, no para registrar la venta aún.
+int confirm = JOptionPane.showConfirmDialog(this, "¿Estás seguro de que quieres finalizar la venta y proceder al cobro?", "Confirmar Venta", JOptionPane.YES_NO_OPTION);
+
+if (confirm == JOptionPane.YES_OPTION) {
+    Interfazcobro cobroFrame = new Interfazcobro(totalVenta, idCajeroActual, conn, (DefaultTableModel) Tabla.getModel());
+    cobroFrame.setVisible(true);
+}
+
+if (confirm == JOptionPane.YES_OPTION) {
+    Interfazcobro cobroFrame = new Interfazcobro(totalVenta, idCajeroActual, conn, (DefaultTableModel) Tabla.getModel());
+
+    cobroFrame.addWindowListener(new java.awt.event.WindowAdapter() {
+        @Override
+        public void windowClosed(java.awt.event.WindowEvent windowEvent) {
+            // LLAMA A TU MÉTODO EXISTENTE PARA LIMPIAR EL CARRITO
+            vaciarCarritoYReiniciar();
+        }
+    });
+
+    cobroFrame.setVisible(true);
+}
     }//GEN-LAST:event_jButton13ActionPerformed
 
     private void jButton12ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton12ActionPerformed
@@ -560,16 +730,146 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     }//GEN-LAST:event_jButton12ActionPerformed
 
     private void jButton11ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton11ActionPerformed
-        new RevisarProducto().setVisible(true);
+        DefaultTableModel model = (DefaultTableModel) Tabla.getModel();
+    int selectedRow = Tabla.getSelectedRow(); // Obtener la fila seleccionada
+
+    // 1. Verificar si hay una fila seleccionada en la tabla
+    if (selectedRow == -1) {
+        JOptionPane.showMessageDialog(this, "Por favor, selecciona un producto de la tabla para revisar su precio.", "Producto No Seleccionado", JOptionPane.WARNING_MESSAGE);
+        return;
+    }
+
+    try {
+        // 2. Obtener el código del producto de la fila seleccionada (columna "Código" - índice 1)
+        // El valor de la columna "Código" en tu tabla del carrito es el IdProducto de la DB.
+        String codigoProductoStr = model.getValueAt(selectedRow, 1).toString(); 
+        int idProducto = Integer.parseInt(codigoProductoStr);
+
+        // 3. Crear y mostrar la ventana de RevisarProducto, pasándole el IdProducto
+        RevisarProducto revisarProductoFrame = new RevisarProducto(idProducto);
+        revisarProductoFrame.setVisible(true);
+
+    } catch (NumberFormatException e) {
+        // Esto podría ocurrir si la columna "Código" en la tabla no contiene un número válido
+        JOptionPane.showMessageDialog(this, "Error: El código del producto en la tabla no es un número válido. " + e.getMessage(), "Error de Datos", JOptionPane.ERROR_MESSAGE);
+        e.printStackTrace();
+    } catch (Exception e) {
+        // Captura cualquier otra excepción inesperada
+        JOptionPane.showMessageDialog(this, "Ocurrió un error al intentar revisar el producto: " + e.getMessage(), "Error Inesperado", JOptionPane.ERROR_MESSAGE);
+        e.printStackTrace();
+    }
     }//GEN-LAST:event_jButton11ActionPerformed
 
     private void jButton10ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton10ActionPerformed
-        new EliminarProdcuto().setVisible(true);
+        DefaultTableModel model = (DefaultTableModel) Tabla.getModel();
+
+    // Obtener la fila seleccionada
+    int selectedRow = Tabla.getSelectedRow();
+
+    // Verificar si hay una fila seleccionada
+    if (selectedRow == -1) {
+        JOptionPane.showMessageDialog(this, "Por favor, selecciona el producto a cancelar de la tabla.", "Ningún Producto Seleccionado", JOptionPane.WARNING_MESSAGE);
+        return;
+    }
+
+    // Confirmar la eliminación con el usuario
+    int confirm = JOptionPane.showConfirmDialog(this, "¿Estás seguro de que quieres cancelar este producto?", "Confirmar Cancelación", JOptionPane.YES_NO_OPTION);
+
+    if (confirm == JOptionPane.YES_OPTION) {
+        try {
+            // Obtener los datos del producto de la fila seleccionada
+            String codigoProducto = model.getValueAt(selectedRow, 1).toString(); // Columna "Código" (Índice 1)
+            int cantidadCancelada = (int) model.getValueAt(selectedRow, 3);    // Columna "Cantidad" (Índice 3)
+            double subtotalCancelado = (double) model.getValueAt(selectedRow, 5); // Columna "Subtotal" (Índice 5)
+
+            // Devolver el stock a la base de datos
+            String updateStockSql = "UPDATE producto SET Stock = Stock + ? WHERE IdProducto = ?";
+            try (PreparedStatement updatePst = conn.prepareStatement(updateStockSql)) {
+                updatePst.setInt(1, cantidadCancelada);
+                updatePst.setString(2, codigoProducto);
+                updatePst.executeUpdate();
+            }
+
+            // Restar el subtotal del producto cancelado del total de la venta
+            totalVenta -= subtotalCancelado;
+            jTextFieldTotalVenta.setText(String.format("%.2f", totalVenta));
+
+            // Eliminar la fila de la tabla
+            model.removeRow(selectedRow);
+            
+            // Reajustar los "No. Producto" después de eliminar una fila (opcional, pero mejora la vista)
+            reajustarNumeroProductoCarrito();
+
+            JOptionPane.showMessageDialog(this, "Producto cancelado y stock devuelto exitosamente.", "Producto Cancelado", JOptionPane.INFORMATION_MESSAGE);
+
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, "Error al devolver el stock a la base de datos: " + ex.getMessage(), "Error de Base de Datos", JOptionPane.ERROR_MESSAGE);
+            ex.printStackTrace();
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "Error al procesar datos del producto: La cantidad o subtotal no son válidos.", "Error de Datos", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Ocurrió un error inesperado al cancelar el producto: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
+        }
+    }
+   
     }//GEN-LAST:event_jButton10ActionPerformed
 
     private void jButton9ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton9ActionPerformed
-        // TODO add your handling code here:
+        DefaultTableModel model = (DefaultTableModel) Tabla.getModel();
+
+    // Verificar si hay productos en el carrito para cancelar
+    if (model.getRowCount() == 0) {
+        JOptionPane.showMessageDialog(this, "El carrito de compras ya está vacío.", "Carrito Vacío", JOptionPane.INFORMATION_MESSAGE);
+        return;
+    }
+
+    int confirm = JOptionPane.showConfirmDialog(this, "¿Estás seguro de que quieres cancelar la venta completa?\nSe devolverá todo el stock de los productos al inventario.", "Confirmar Cancelación de Venta", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+
+    if (confirm == JOptionPane.YES_OPTION) {
+        try {
+            String updateStockSql = "UPDATE producto SET Stock = Stock + ? WHERE IdProducto = ?";
+            
+            // Iterar sobre cada fila de la tabla para devolver el stock
+            for (int i = 0; i < model.getRowCount(); i++) {
+                String codigoProducto = model.getValueAt(i, 1).toString(); // Columna "Código"
+                int cantidadDevuelta = (int) model.getValueAt(i, 3);    // Columna "Cantidad"
+
+                try (PreparedStatement updatePst = conn.prepareStatement(updateStockSql)) {
+                    updatePst.setInt(1, cantidadDevuelta);
+                    updatePst.setString(2, codigoProducto);
+                    updatePst.executeUpdate();
+                }
+            }
+
+            // Limpiar todas las filas de la tabla
+            model.setRowCount(0); // Esto elimina todas las filas
+
+            // Reiniciar el total de la venta
+            totalVenta = 0.0;
+            jTextFieldTotalVenta.setText(String.format("%.2f", totalVenta));
+
+            // Reiniciar el contador de productos en el carrito
+            numeroProductoCarrito = 1;
+
+            // Limpiar campos de entrada
+            jTextFieldBusqueda.setText("");
+            jTextFieldCantidad.setText("1");
+            jTextFieldBusqueda.requestFocusInWindow();
+
+            JOptionPane.showMessageDialog(this, "Venta cancelada y stock devuelto exitosamente.", "Venta Cancelada", JOptionPane.INFORMATION_MESSAGE);
+
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, "Error al cancelar la venta y devolver stock: " + ex.getMessage(), "Error de Base de Datos", JOptionPane.ERROR_MESSAGE);
+            ex.printStackTrace();
+        }
+    }
     }//GEN-LAST:event_jButton9ActionPerformed
+
+    private void AgregarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_AgregarActionPerformed
+        agregarProductoACarrito();
+    }//GEN-LAST:event_AgregarActionPerformed
 
     public static void main(String args[]) {
 
@@ -581,6 +881,7 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton Agregar;
     private javax.swing.JLabel AlmacenRopa;
     private javax.swing.JLabel Cantidad;
     private javax.swing.JLabel CodigoProducto;
@@ -607,9 +908,9 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     private javax.swing.JLabel jLabel4;
     private javax.swing.JPanel jPanelPrincipal;
     private javax.swing.JScrollPane jScrollPane1;
-    private javax.swing.JTextField jTextField1;
-    private javax.swing.JTextField jTextField2;
-    private javax.swing.JTextField jTextField3;
+    private javax.swing.JTextField jTextFieldBusqueda;
+    private javax.swing.JTextField jTextFieldCantidad;
+    private javax.swing.JTextField jTextFieldTotalVenta;
     private javax.swing.JLabel lblCajeroEnTurno;
     private javax.swing.JLabel lblPresupuestoBase;
     // End of variables declaration//GEN-END:variables
