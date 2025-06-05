@@ -33,65 +33,120 @@ import com.itextpdf.text.Font; // Para fuentes
 import com.itextpdf.text.FontFactory; // Para crear fuentes
 import com.itextpdf.text.BaseColor; // Para colores de fuente o fondo
 
+import javax.swing.table.DefaultTableModel;
+
 
 public class GenerarReportes extends javax.swing.JFrame {
     
     private String formatoSeleccionado = "";
+    private Connection conn; // Atributo para la conexión a la DB
+    private String tipoDeReporte; // "inventario" o "ventas"
+    private DefaultTableModel datosTablaReporte; // Para datos de ventas (si aplica)
     
-    public GenerarReportes (java.awt.Frame parent) {
+    public GenerarReportes() {
+        initComponents();
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setLocationRelativeTo(null); // Centrar la ventana
+        setTitle("GENERAR REPORTES");
+        this.conn = null; // Inicializar a null si no se pasa conexión
+        this.tipoDeReporte = ""; // Valor por defecto
+        this.datosTablaReporte = null; // Por defecto no hay datos de tabla
+    }
+    
+    public GenerarReportes(java.awt.Frame parent, Connection conexion, String tipoReporte, DefaultTableModel datosTabla) {
         super();
+        this.conn = conexion;
+        this.tipoDeReporte = tipoReporte;
+        this.datosTablaReporte = datosTabla; // Esto será null para inventario, y el modelo de la tabla de ventas para ventas
+
         initComponents(); // NetBeans genera el código aquí y los ActionPerformed
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(parent);
-        setTitle("GENERAR REPORTES EN:"); // Título de la ventana
+
+        // Adaptar el título de la ventana según el tipo de reporte
+        if ("inventario".equals(tipoReporte)) {
+            setTitle("GENERAR REPORTE DE INVENTARIO EN:");
+        } else if ("ventas".equals(tipoReporte)) {
+            setTitle("GENERAR REPORTE DE VENTAS EN:");
+        } else {
+            setTitle("GENERAR REPORTE EN:"); // Título genérico si no se especifica tipo
+        }
     }
     
     private void generarReporteWord(File archivo) {
         XWPFDocument document = new XWPFDocument();
-        Connection conn = null;
         PreparedStatement pstmt = null;
         ResultSet rs = null;
 
         try {
-            conn = Conexion.conectar();
-            // Asegúrate de que la query seleccione todas las columnas necesarias
-            String sql = "SELECT IdProducto, Nombre, Precio, PrecioCompra, Stock, Marca, Descuento, Descripcion FROM producto";
-            pstmt = conn.prepareStatement(sql);
-            rs = pstmt.executeQuery();
-
             // Título del reporte
             XWPFParagraph title = document.createParagraph();
             XWPFRun titleRun = title.createRun();
-            titleRun.setText("REPORTE DE INVENTARIO - WORD");
             titleRun.setBold(true);
             titleRun.setFontSize(18);
-            titleRun.addBreak(); // Salto de línea
 
             // Encabezados de la tabla como párrafos
             XWPFParagraph header = document.createParagraph();
             XWPFRun headerRun = header.createRun();
-            headerRun.setText("Código | Nombre | P. Venta | P. Compra | Stock | Marca | Descuento | Descripción");
             headerRun.setBold(true);
-            headerRun.addBreak();
 
-            // Datos del inventario
-            while (rs.next()) {
-                XWPFParagraph productPara = document.createParagraph();
-                XWPFRun productRun = productPara.createRun();
-                productRun.setText(
-                    String.format("%s | %s | %.2f | %.2f | %d | %s | %.2f%% | %s",
-                        rs.getString("IdProducto"),
-                        rs.getString("Nombre"),
-                        rs.getDouble("Precio"),
-                        rs.getDouble("PrecioCompra"),
-                        rs.getInt("Stock"),
-                        rs.getString("Marca"),
-                        rs.getDouble("Descuento"),
-                        rs.getString("Descripcion")
-                    )
-                );
-                productRun.addBreak();
+            if ("inventario".equals(tipoDeReporte)) {
+                titleRun.setText("REPORTE DE INVENTARIO - WORD");
+                headerRun.setText("ID | Nombre | P. Venta | P. Compra | Stock | Marca | Descuento | Descripción");
+                String sql = "SELECT IdProducto, Nombre, Precio, PrecioCompra, Stock, Marca, Descuento, Descripcion FROM producto";
+                pstmt = conn.prepareStatement(sql);
+                rs = pstmt.executeQuery();
+
+                while (rs.next()) {
+                    XWPFParagraph productPara = document.createParagraph();
+                    XWPFRun productRun = productPara.createRun();
+                    productRun.setText(
+                        String.format("%s | %s | %.2f | %.2f | %d | %s | %.2f%% | %s",
+                            rs.getString("IdProducto"),
+                            rs.getString("Nombre"),
+                            rs.getDouble("Precio"),
+                            rs.getDouble("PrecioCompra"),
+                            rs.getInt("Stock"),
+                            rs.getString("Marca"),
+                            rs.getDouble("Descuento"),
+                            rs.getString("Descripcion")
+                        )
+                    );
+                    productRun.addBreak();
+                }
+            } else if ("ventas".equals(tipoDeReporte) && datosTablaReporte != null) {
+                titleRun.setText("REPORTE DE VENTAS - WORD");
+                // Construir encabezados dinámicamente desde el DefaultTableModel
+                StringBuilder headersBuilder = new StringBuilder();
+                for (int i = 0; i < datosTablaReporte.getColumnCount(); i++) {
+                    headersBuilder.append(datosTablaReporte.getColumnName(i));
+                    if (i < datosTablaReporte.getColumnCount() - 1) {
+                        headersBuilder.append(" | ");
+                    }
+                }
+                headerRun.setText(headersBuilder.toString());
+
+                // Recorrer los datos del DefaultTableModel
+                for (int row = 0; row < datosTablaReporte.getRowCount(); row++) {
+                    XWPFParagraph dataPara = document.createParagraph();
+                    XWPFRun dataRun = dataPara.createRun();
+                    StringBuilder rowData = new StringBuilder();
+                    for (int col = 0; col < datosTablaReporte.getColumnCount(); col++) {
+                        rowData.append(datosTablaReporte.getValueAt(row, col).toString());
+                        if (col < datosTablaReporte.getColumnCount() - 1) {
+                            rowData.append(" | ");
+                        }
+                    }
+                    dataRun.setText(rowData.toString());
+                    dataRun.addBreak();
+                }
+            } else {
+                JOptionPane.showMessageDialog(this, "Tipo de reporte no válido o datos no proporcionados para WORD.", "Error de Reporte", JOptionPane.ERROR_MESSAGE);
+                return; // Salir si no hay tipo o datos
             }
+
+            titleRun.addBreak(); // Salto de línea después del título
+            headerRun.addBreak(); // Salto de línea después de los encabezados
 
             try (FileOutputStream out = new FileOutputStream(archivo)) {
                 document.write(out);
@@ -105,6 +160,7 @@ public class GenerarReportes extends javax.swing.JFrame {
             try {
                 if (rs != null) rs.close();
                 if (pstmt != null) pstmt.close();
+                // No cerrar 'conn' aquí, ya que se pasa desde fuera
             } catch (SQLException e) {
                 e.printStackTrace();
             }
@@ -113,98 +169,121 @@ public class GenerarReportes extends javax.swing.JFrame {
     
     private void generarReporteExcel(File archivo) {
         XSSFWorkbook workbook = new XSSFWorkbook();
-        XSSFSheet sheet = workbook.createSheet("Inventario");
-
-        Connection conn = null;
+        XSSFSheet sheet = workbook.createSheet("Reporte"); // Nombre de la hoja
         PreparedStatement pstmt = null;
         ResultSet rs = null;
 
         try {
-            conn = Conexion.conectar();
-            String sql = "SELECT IdProducto, Nombre, Precio, PrecioCompra, Stock, Marca, Descuento, Descripcion FROM producto";
-            pstmt = conn.prepareStatement(sql);
-            rs = pstmt.executeQuery();
-            
             // --- Definir estilos de celda ---
-             // Estilo para todas las celdas (bordes finos)
             CellStyle borderStyle = workbook.createCellStyle();
             borderStyle.setBorderBottom(BorderStyle.THIN);
             borderStyle.setBorderTop(BorderStyle.THIN);
             borderStyle.setBorderLeft(BorderStyle.THIN);
             borderStyle.setBorderRight(BorderStyle.THIN);
 
-            // Estilo para el texto en negrita (para la cabecera)
             XSSFFont boldFont = workbook.createFont();
             boldFont.setBold(true);
 
-            // Estilo para el encabezado (bordes finos y texto en negrita, SIN color de fondo)
             CellStyle headerStyle = workbook.createCellStyle();
-            headerStyle.cloneStyleFrom(borderStyle); // Copia los bordes finos
-            headerStyle.setFont(boldFont); // Aplica la fuente en negrita
+            headerStyle.cloneStyleFrom(borderStyle);
+            headerStyle.setFont(boldFont);
 
-            // Encabezados de la tabla
-            XSSFRow headerRow = sheet.createRow(0);
-            String[] headers = {"IdProducto", "Nombre", "Precio", "PrecioCompra", "Stock", "Marca", "Descuento", "Descripción"};
-            for (int i = 0; i < headers.length; i++) {
-                XSSFCell cell = headerRow.createCell(i);
-                cell.setCellValue(headers[i]);
-                cell.setCellStyle(headerStyle); // Aplicar estilo al encabezado
-            }
+            // Encabezados y datos
+            String[] headers;
+            int rowNum = 0;
 
-             // Datos
-            int rowNum = 1;
-            while (rs.next()) {
-                XSSFRow row = sheet.createRow(rowNum);
+            if ("inventario".equals(tipoDeReporte)) {
+                headers = new String[]{"IdProducto", "Nombre", "Precio", "PrecioCompra", "Stock", "Marca", "Descuento", "Descripción"};
+                String sql = "SELECT IdProducto, Nombre, Precio, PrecioCompra, Stock, Marca, Descuento, Descripcion FROM producto";
+                pstmt = conn.prepareStatement(sql);
+                rs = pstmt.executeQuery();
 
-                row.createCell(0).setCellValue(rs.getInt("IdProducto"));
-                row.createCell(1).setCellValue(rs.getString("Nombre"));
-                row.createCell(2).setCellValue(rs.getDouble("Precio"));
-                row.createCell(3).setCellValue(rs.getDouble("PrecioCompra"));
-                row.createCell(4).setCellValue(rs.getInt("Stock"));
-                row.createCell(5).setCellValue(rs.getString("Marca"));
-                row.createCell(6).setCellValue(rs.getDouble("Descuento"));
-                row.createCell(7).setCellValue(rs.getString("Descripcion"));
-
-                // Aplicar estilo de borde fino a todas las celdas de datos
+                // Escribir encabezados
+                XSSFRow headerRow = sheet.createRow(rowNum++);
                 for (int i = 0; i < headers.length; i++) {
-                    XSSFCell cell = row.getCell(i);
-                    if (cell != null) {
-                        cell.setCellStyle(borderStyle); // Aplica el estilo con bordes finos
+                    XSSFCell cell = headerRow.createCell(i);
+                    cell.setCellValue(headers[i]);
+                    cell.setCellStyle(headerStyle);
+                }
+
+                // Escribir datos
+                while (rs.next()) {
+                    XSSFRow row = sheet.createRow(rowNum++);
+                    row.createCell(0).setCellValue(rs.getInt("IdProducto"));
+                    row.createCell(1).setCellValue(rs.getString("Nombre"));
+                    row.createCell(2).setCellValue(rs.getDouble("Precio"));
+                    row.createCell(3).setCellValue(rs.getDouble("PrecioCompra"));
+                    row.createCell(4).setCellValue(rs.getInt("Stock"));
+                    row.createCell(5).setCellValue(rs.getString("Marca"));
+                    row.createCell(6).setCellValue(rs.getDouble("Descuento"));
+                    row.createCell(7).setCellValue(rs.getString("Descripcion"));
+
+                    for (int i = 0; i < headers.length; i++) {
+                        XSSFCell cell = row.getCell(i);
+                        if (cell != null) {
+                            cell.setCellStyle(borderStyle);
+                        }
                     }
                 }
-                rowNum++;
+            } else if ("ventas".equals(tipoDeReporte) && datosTablaReporte != null) {
+                // Obtener encabezados del modelo de tabla
+                headers = new String[datosTablaReporte.getColumnCount()];
+                for (int i = 0; i < datosTablaReporte.getColumnCount(); i++) {
+                    headers[i] = datosTablaReporte.getColumnName(i);
+                }
+
+                // Escribir encabezados
+                XSSFRow headerRow = sheet.createRow(rowNum++);
+                for (int i = 0; i < headers.length; i++) {
+                    XSSFCell cell = headerRow.createCell(i);
+                    cell.setCellValue(headers[i]);
+                    cell.setCellStyle(headerStyle);
+                }
+
+                // Escribir datos del modelo de tabla
+                for (int row = 0; row < datosTablaReporte.getRowCount(); row++) {
+                    XSSFRow excelRow = sheet.createRow(rowNum++);
+                    for (int col = 0; col < datosTablaReporte.getColumnCount(); col++) {
+                        XSSFCell cell = excelRow.createCell(col);
+                        Object value = datosTablaReporte.getValueAt(row, col);
+                        if (value != null) {
+                            cell.setCellValue(value.toString()); // Convertir todo a String por simplicidad
+                        }
+                        cell.setCellStyle(borderStyle);
+                    }
+                }
+            } else {
+                JOptionPane.showMessageDialog(this, "Tipo de reporte no válido o datos no proporcionados para EXCEL.", "Error de Reporte", JOptionPane.ERROR_MESSAGE);
+                return;
             }
 
-            // Autoajustar columnas para que el contenido sea visible
-            for (int i = 0; i < headers.length; i++) {
-                sheet.autoSizeColumn(i);
+            // Autoajustar columnas
+            if (headers != null) {
+                for (int i = 0; i < headers.length; i++) {
+                    sheet.autoSizeColumn(i);
+                }
             }
 
-            // --- Guardar el archivo ---
+            // Guardar el archivo
             try (FileOutputStream out = new FileOutputStream(archivo)) {
                 workbook.write(out);
-                System.out.println("Reporte EXCEL generado exitosamente en:\n" + archivo); // Usar 'archivo' directamente
-                JOptionPane.showMessageDialog(null, "Reporte EXCEL generado exitosamente en:\n" + archivo, "Exito", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Reporte EXCEL generado exitosamente en:\n" + archivo.getAbsolutePath(), "Éxito", JOptionPane.INFORMATION_MESSAGE);
             } catch (IOException e) {
-                System.err.println("Error de E/S al generar el reporte Excel: " + e.getMessage());
+                JOptionPane.showMessageDialog(this, "Error de E/S al generar el reporte Excel: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
                 e.printStackTrace();
-                JOptionPane.showMessageDialog(null, "Error al generar reporte EXCEL: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             }
 
         } catch (SQLException e) {
-            System.err.println("Error SQL al generar el reporte Excel: " + e.getMessage());
+            JOptionPane.showMessageDialog(this, "Error SQL al generar el reporte Excel: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             e.printStackTrace();
-            JOptionPane.showMessageDialog(null, "Error al generar reporte EXCEL: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         } catch (Exception e) {
-            System.err.println("Error inesperado al generar el reporte Excel: " + e.getMessage());
+            JOptionPane.showMessageDialog(this, "Error inesperado al generar el reporte Excel: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             e.printStackTrace();
-            JOptionPane.showMessageDialog(null, "Error inesperado al generar reporte EXCEL: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         } finally {
             try {
                 if (rs != null) rs.close();
                 if (pstmt != null) pstmt.close();
             } catch (SQLException e) {
-                System.err.println("Error al cerrar recursos DB: " + e.getMessage());
                 e.printStackTrace();
             }
         }
@@ -212,107 +291,111 @@ public class GenerarReportes extends javax.swing.JFrame {
 
     private void generarReportePdf(File archivo) {
         Document document = new Document();
-        Connection conn = null;
         PreparedStatement pstmt = null;
         ResultSet rs = null;
 
         try {
             PdfWriter.getInstance(document, new FileOutputStream(archivo));
             document.open();
-            
+
             Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 18, BaseColor.BLACK);
-            Paragraph title = new Paragraph("REPORTE DE INVENTARIO - PDF", titleFont);
+            Paragraph title = new Paragraph("", titleFont); // Título vacío por ahora
             title.setAlignment(Paragraph.ALIGN_CENTER);
-            document.add(title);
-            document.add(Chunk.NEWLINE);
+            //document.add(title);
+            //document.add(Chunk.NEWLINE);
 
-            conn = Conexion.conectar();
-            String sql = "SELECT IdProducto, Nombre, Precio, PrecioCompra, Stock, Marca, Descuento, Descripcion FROM producto";
-            pstmt = conn.prepareStatement(sql);
-            rs = pstmt.executeQuery();
+            PdfPTable table;
+            String[] headers;
 
-            PdfPTable table = new PdfPTable(8); // 8 columnas
-            table.setWidthPercentage(100);
-            table.setSpacingBefore(10f);
-            table.setSpacingAfter(10f);
-            float[] columnWidths = {1f, 2f, 1f, 1f, 0.8f, 1.2f, 0.8f, 2f};
-            table.setWidths(columnWidths);
+            if ("inventario".equals(tipoDeReporte)) {
+                title = new Paragraph("REPORTE DE INVENTARIO - PDF", titleFont);
+                title.setAlignment(Paragraph.ALIGN_CENTER);// Asignar el contenido aquí
+                document.add(title); // Añadir el título con el contenido actualizado
+                document.add(Chunk.NEWLINE);
 
-            Font headerFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9, BaseColor.WHITE);
-            BaseColor headerBgColor = new BaseColor(60, 141, 188); 
+                headers = new String[]{"ID", "Nombre", "P. Venta", "P. Compra", "Stock", "Marca", "Desc. (%)", "Descripción"};
+                table = new PdfPTable(headers.length); // 8 columnas
+                float[] columnWidths = {1f, 2f, 1f, 1f, 0.8f, 1.2f, 0.8f, 2f};
+                table.setWidths(columnWidths);
 
-            // Celdas de encabezado para PDF
-            com.itextpdf.text.Phrase phrase; 
-            com.itextpdf.text.pdf.PdfPCell headerCell; 
+                String sql = "SELECT IdProducto, Nombre, Precio, PrecioCompra, Stock, Marca, Descuento, Descripcion FROM producto";
+                pstmt = conn.prepareStatement(sql);
+                rs = pstmt.executeQuery();
 
-            phrase = new com.itextpdf.text.Phrase("ID", headerFont);
-            headerCell = new com.itextpdf.text.pdf.PdfPCell(phrase);
-            headerCell.setBackgroundColor(headerBgColor);
-            headerCell.setHorizontalAlignment(com.itextpdf.text.Element.ALIGN_CENTER);
-            headerCell.setPadding(5);
-            table.addCell(headerCell);
+                // Llenar encabezados de tabla PDF (para inventario)
+                Font headerFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9, BaseColor.WHITE);
+                BaseColor headerBgColor = new BaseColor(60, 141, 188);
+                for (String headerText : headers) {
+                    com.itextpdf.text.Phrase phrase = new com.itextpdf.text.Phrase(headerText, headerFont);
+                    com.itextpdf.text.pdf.PdfPCell headerCell = new com.itextpdf.text.pdf.PdfPCell(phrase);
+                    headerCell.setBackgroundColor(headerBgColor);
+                    headerCell.setHorizontalAlignment(com.itextpdf.text.Element.ALIGN_CENTER);
+                    headerCell.setPadding(5);
+                    table.addCell(headerCell);
+                }
 
-            phrase = new com.itextpdf.text.Phrase("Nombre", headerFont);
-            headerCell = new com.itextpdf.text.pdf.PdfPCell(phrase);
-            headerCell.setBackgroundColor(headerBgColor);
-            headerCell.setHorizontalAlignment(com.itextpdf.text.Element.ALIGN_CENTER);
-            headerCell.setPadding(5);
-            table.addCell(headerCell);
-            
-            phrase = new com.itextpdf.text.Phrase("P. Venta", headerFont);
-            headerCell = new com.itextpdf.text.pdf.PdfPCell(phrase);
-            headerCell.setBackgroundColor(headerBgColor);
-            headerCell.setHorizontalAlignment(com.itextpdf.text.Element.ALIGN_CENTER);
-            headerCell.setPadding(5);
-            table.addCell(headerCell);
+                // Llenar datos de tabla PDF (para inventario)
+                Font dataFont = FontFactory.getFont(FontFactory.HELVETICA, 8, BaseColor.BLACK);
+                while (rs.next()) {
+                    table.addCell(new Paragraph(rs.getString("IdProducto"), dataFont));
+                    table.addCell(new Paragraph(rs.getString("Nombre"), dataFont));
+                    table.addCell(new Paragraph(String.format("%,.2f", rs.getDouble("Precio")), dataFont));
+                    table.addCell(new Paragraph(String.format("%,.2f", rs.getDouble("PrecioCompra")), dataFont));
+                    table.addCell(new Paragraph(String.valueOf(rs.getInt("Stock")), dataFont));
+                    table.addCell(new Paragraph(rs.getString("Marca"), dataFont));
+                    table.addCell(new Paragraph(String.format("%,.2f", rs.getDouble("Descuento")), dataFont));
+                    table.addCell(new Paragraph(rs.getString("Descripcion"), dataFont));
+                }
+            } else if ("ventas".equals(tipoDeReporte) && datosTablaReporte != null) {
+                title = new Paragraph("REPORTE DE VENTAS - PDF", titleFont);
+                title.setAlignment(Paragraph.ALIGN_CENTER);
+                document.add(title); // Añadir el título con el contenido actualizado
+                document.add(Chunk.NEWLINE);
 
-            phrase = new com.itextpdf.text.Phrase("P. Compra", headerFont);
-            headerCell = new com.itextpdf.text.pdf.PdfPCell(phrase);
-            headerCell.setBackgroundColor(headerBgColor);
-            headerCell.setHorizontalAlignment(com.itextpdf.text.Element.ALIGN_CENTER);
-            headerCell.setPadding(5);
-            table.addCell(headerCell);
+                // Obtener encabezados y datos del modelo de tabla
+                headers = new String[datosTablaReporte.getColumnCount()];
+                for (int i = 0; i < datosTablaReporte.getColumnCount(); i++) {
+                    headers[i] = datosTablaReporte.getColumnName(i);
+                }
+                table = new PdfPTable(headers.length);
+                table.setWidthPercentage(100);
+                table.setSpacingBefore(10f);
+                table.setSpacingAfter(10f);
 
-            phrase = new com.itextpdf.text.Phrase("Stock", headerFont);
-            headerCell = new com.itextpdf.text.pdf.PdfPCell(phrase);
-            headerCell.setBackgroundColor(headerBgColor);
-            headerCell.setHorizontalAlignment(com.itextpdf.text.Element.ALIGN_CENTER);
-            headerCell.setPadding(5);
-            table.addCell(headerCell);
+                // Asignar anchos de columna (puedes ajustar estos valores)
+                float[] dynamicWidths = new float[headers.length];
+                for (int i = 0; i < headers.length; i++) {
+                    dynamicWidths[i] = 1.5f; // Un ancho base, puedes afinarlo
+                    if (headers[i].contains("Descripción") || headers[i].contains("Nombre")) dynamicWidths[i] = 2.5f;
+                    else if (headers[i].contains("ID")) dynamicWidths[i] = 0.8f;
+                }
+                table.setWidths(dynamicWidths);
 
-            phrase = new com.itextpdf.text.Phrase("Marca", headerFont);
-            headerCell = new com.itextpdf.text.pdf.PdfPCell(phrase);
-            headerCell.setBackgroundColor(headerBgColor);
-            headerCell.setHorizontalAlignment(com.itextpdf.text.Element.ALIGN_CENTER);
-            headerCell.setPadding(5);
-            table.addCell(headerCell);
-            
-            phrase = new com.itextpdf.text.Phrase("Desc. (%)", headerFont);
-            headerCell = new com.itextpdf.text.pdf.PdfPCell(phrase);
-            headerCell.setBackgroundColor(headerBgColor);
-            headerCell.setHorizontalAlignment(com.itextpdf.text.Element.ALIGN_CENTER);
-            headerCell.setPadding(5);
-            table.addCell(headerCell);
+                // Llenar encabezados de tabla PDF (para ventas)
+                Font headerFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9, BaseColor.WHITE);
+                BaseColor headerBgColor = new BaseColor(60, 141, 188);
+                for (String headerText : headers) {
+                    com.itextpdf.text.Phrase phrase = new com.itextpdf.text.Phrase(headerText, headerFont);
+                    com.itextpdf.text.pdf.PdfPCell headerCell = new com.itextpdf.text.pdf.PdfPCell(phrase);
+                    headerCell.setBackgroundColor(headerBgColor);
+                    headerCell.setHorizontalAlignment(com.itextpdf.text.Element.ALIGN_CENTER);
+                    headerCell.setPadding(5);
+                    table.addCell(headerCell);
+                }
 
-            phrase = new com.itextpdf.text.Phrase("Descripción", headerFont);
-            headerCell = new com.itextpdf.text.pdf.PdfPCell(phrase);
-            headerCell.setBackgroundColor(headerBgColor);
-            headerCell.setHorizontalAlignment(com.itextpdf.text.Element.ALIGN_CENTER);
-            headerCell.setPadding(5);
-            table.addCell(headerCell);
-
-            // Datos de la tabla PDF
-            Font dataFont = FontFactory.getFont(FontFactory.HELVETICA, 8, BaseColor.BLACK);
-            while (rs.next()) {
-                table.addCell(new Paragraph(rs.getString("IdProducto"), dataFont));
-                table.addCell(new Paragraph(rs.getString("Nombre"), dataFont));
-                table.addCell(new Paragraph(String.format("%,.2f", rs.getDouble("Precio")), dataFont));
-                table.addCell(new Paragraph(String.format("%,.2f", rs.getDouble("PrecioCompra")), dataFont));
-                table.addCell(new Paragraph(String.valueOf(rs.getInt("Stock")), dataFont));
-                table.addCell(new Paragraph(rs.getString("Marca"), dataFont));
-                table.addCell(new Paragraph(String.format("%,.2f", rs.getDouble("Descuento")), dataFont));
-                table.addCell(new Paragraph(rs.getString("Descripcion"), dataFont));
+                // Llenar datos de tabla PDF (para ventas desde el modelo de tabla)
+                Font dataFont = FontFactory.getFont(FontFactory.HELVETICA, 8, BaseColor.BLACK);
+                for (int row = 0; row < datosTablaReporte.getRowCount(); row++) {
+                    for (int col = 0; col < datosTablaReporte.getColumnCount(); col++) {
+                        Object value = datosTablaReporte.getValueAt(row, col);
+                        table.addCell(new Paragraph(value != null ? value.toString() : "", dataFont));
+                    }
+                }
+            } else {
+                JOptionPane.showMessageDialog(this, "Tipo de reporte no válido o datos no proporcionados para PDF.", "Error de Reporte", JOptionPane.ERROR_MESSAGE);
+                return;
             }
+
             document.add(table); // Añade la tabla al documento
 
             document.close(); // Cierra el documento
@@ -340,8 +423,16 @@ public class GenerarReportes extends javax.swing.JFrame {
 
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setDialogTitle("Guardar Reporte");
-        // Establecer el nombre de archivo por defecto con la extensión correcta
-        fileChooser.setSelectedFile(new File("ReporteInventario." + formatoSeleccionado.toLowerCase()));
+
+        // Determinar el nombre base del archivo según el tipo de reporte
+        String nombreBase = "Reporte";
+        if ("inventario".equals(tipoDeReporte)) {
+            nombreBase = "ReporteInventario";
+        } else if ("ventas".equals(tipoDeReporte)) {
+            nombreBase = "ReporteVentas";
+        }
+        
+        fileChooser.setSelectedFile(new File(nombreBase + "." + formatoSeleccionado.toLowerCase()));
 
         int userSelection = fileChooser.showSaveDialog(this);
 
@@ -526,7 +617,7 @@ public class GenerarReportes extends javax.swing.JFrame {
 
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
-                
+                new GenerarReportes().setVisible(true);
             }
         });
     }

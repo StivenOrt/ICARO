@@ -581,8 +581,12 @@ public class HistorialVentas extends javax.swing.JFrame {
     }//GEN-LAST:event_btnActualizarDatosActionPerformed
 
     private void btnGenerarReporteActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnGenerarReporteActionPerformed
-        GenerarReportes reporteFrame = new GenerarReportes(this); // 'this' se refiere al JFrame actual (Inventario o HistorialVentas)
-        reporteFrame.setVisible(true);
+        if (modeloTablaVentas.getRowCount() == 0) {
+        JOptionPane.showMessageDialog(this, "No hay datos de ventas para generar un reporte.", "Sin Datos", JOptionPane.WARNING_MESSAGE);
+        return;
+    }
+    GenerarReportes reporteFrame = new GenerarReportes(this, conn, "ventas", modeloTablaVentas);
+    reporteFrame.setVisible(true);
     }//GEN-LAST:event_btnGenerarReporteActionPerformed
 
     private void btnBuscarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnBuscarActionPerformed

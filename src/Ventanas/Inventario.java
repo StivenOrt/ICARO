@@ -19,7 +19,7 @@ public class Inventario extends javax.swing.JFrame {
     
     private DefaultTableModel modeloTablaInventario;
     private TableRowSorter<DefaultTableModel> sorter;
-    private Connection conexionBD; // Asegúrate de que exista
+    private Connection conn;
 
     public Inventario() {
         initComponents();
@@ -621,8 +621,8 @@ public class Inventario extends javax.swing.JFrame {
     }//GEN-LAST:event_btnModificarProductoActionPerformed
 
     private void btnGenerarReporteActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnGenerarReporteActionPerformed
-        GenerarReportes reporteFrame = new GenerarReportes(this); // 'this' se refiere al JFrame Inventario
-        reporteFrame.setVisible(true); // Hace visible la ventana de reportes
+        GenerarReportes reporteFrame = new GenerarReportes(this, conn, "inventario", null);
+        reporteFrame.setVisible(true);
     }//GEN-LAST:event_btnGenerarReporteActionPerformed
 
     private void btnAgregarProductoActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnAgregarProductoActionPerformed
