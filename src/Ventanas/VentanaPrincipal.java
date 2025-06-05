@@ -659,7 +659,8 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     }//GEN-LAST:event_jButton6ActionPerformed
 
     private void jButton5ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton5ActionPerformed
-        new HistorialVentas().setVisible(true);
+        HistorialVentas historialFrame = new HistorialVentas(conn);
+        historialFrame.setVisible(true);
     }//GEN-LAST:event_jButton5ActionPerformed
 
     private void jButton4ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton4ActionPerformed
@@ -693,25 +694,20 @@ if (model.getRowCount() == 0) {
     return; // Salir del método si no hay productos
 }
 
-// 2. Verificar que el ID del cajero esté disponible (ESTO SE CONSERVA)
-// idCajeroActual debe ser inicializado en el constructor de VentanaPrincipal
-// con el método obtenerIdCajeroActual() como discutimos.
 if (idCajeroActual == -1) { // -1 es el valor por defecto si no se encontró el cajero
     JOptionPane.showMessageDialog(this, "No se pudo identificar al cajero en turno. La venta no puede ser registrada. Asegúrate de que el usuario 'admin' exista en la base de datos.", "Error de Cajero", JOptionPane.ERROR_MESSAGE);
     return; // Salir del método si el cajero no es válido
 }
 
-// 3. Confirmar la venta con el usuario (ESTO SE CONSERVA, pero cambia su PROPÓSITO)
-// Ahora, la confirmación es para *abrir la ventana de cobro*, no para registrar la venta aún.
 int confirm = JOptionPane.showConfirmDialog(this, "¿Estás seguro de que quieres finalizar la venta y proceder al cobro?", "Confirmar Venta", JOptionPane.YES_NO_OPTION);
 
 if (confirm == JOptionPane.YES_OPTION) {
-    Interfazcobro cobroFrame = new Interfazcobro(totalVenta, idCajeroActual, conn, (DefaultTableModel) Tabla.getModel());
+    Interfazcobro cobroFrame = new Interfazcobro(totalVenta, idCajeroActual, this.nombreCajero, conn, (DefaultTableModel) Tabla.getModel());
     cobroFrame.setVisible(true);
 }
 
 if (confirm == JOptionPane.YES_OPTION) {
-    Interfazcobro cobroFrame = new Interfazcobro(totalVenta, idCajeroActual, conn, (DefaultTableModel) Tabla.getModel());
+    Interfazcobro cobroFrame = new Interfazcobro(totalVenta, idCajeroActual, this.nombreCajero, conn, (DefaultTableModel) Tabla.getModel());
 
     cobroFrame.addWindowListener(new java.awt.event.WindowAdapter() {
         @Override

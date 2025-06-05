@@ -1,5 +1,6 @@
 package Ventanas;
 
+import java.io.PrintWriter;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.table.DefaultTableModel; // Importar DefaultTableModel
@@ -16,8 +17,12 @@ public class Interfazcobro extends javax.swing.JFrame {
     private int idCajeroActual; // Añadido
     private Connection conn; // Añadido: Para la conexión a la base de datos
     private DefaultTableModel tablaProductosModel; // Añadido: Para los productos en el carrito
+    private String nombreCajeroActual;
     
-    public Interfazcobro (double totalAPagar, int idCajero, Connection conexion, DefaultTableModel productosModel) {
+    private int idVentaExitosa = -1; // -1 indica que no se ha registrado una venta aún
+    private String idClienteExitosa = "N/A"; // "N/A" por defecto
+    
+    public Interfazcobro(double totalAPagar, int idCajero, String nombreCajero, Connection conexion, DefaultTableModel productosModel) {
         initComponents(); // Inicializa los componentes de la UI
         setLocationRelativeTo(null); // Centra la ventana
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE); // Cierra solo esta ventana
@@ -27,6 +32,7 @@ public class Interfazcobro extends javax.swing.JFrame {
         this.idCajeroActual = idCajero;
         this.conn = conexion; // Asigna la conexión pasada desde VentanaPrincipal
         this.tablaProductosModel = productosModel;
+        this.nombreCajeroActual = nombreCajero;
 
         // Configura los campos de texto
         txtTotalAPagar.setText(String.format("%.2f", totalAPagar));
@@ -53,6 +59,12 @@ public class Interfazcobro extends javax.swing.JFrame {
         initComponents();
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        
+        this.totalVentaActual = 0.0;
+        this.idCajeroActual = -1;
+        this.nombreCajeroActual = "Desconocido";
+        this.conn = null; // O establece una conexión de prueba
+        this.tablaProductosModel = new DefaultTableModel(); // O un modelo vacío
     }
     
     private void calcularCambio() {
@@ -168,6 +180,11 @@ public class Interfazcobro extends javax.swing.JFrame {
         jButton5.setBackground(new java.awt.Color(217, 217, 217));
         jButton5.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
         jButton5.setText("Crear Factura");
+        jButton5.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton5ActionPerformed(evt);
+            }
+        });
 
         jButton6.setBackground(new java.awt.Color(217, 217, 217));
         jButton6.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
@@ -311,7 +328,21 @@ public class Interfazcobro extends javax.swing.JFrame {
     }//GEN-LAST:event_txtPagoConActionPerformed
 
     private void jButton6ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton6ActionPerformed
-        // TODO add your handling code here:
+        int confirm = JOptionPane.showConfirmDialog(this,
+                            "Desea descartar la venta actual y comenzar una nueva compra?",
+                            "Confirmar Nueva Compra",
+                            JOptionPane.YES_NO_OPTION,
+                            JOptionPane.QUESTION_MESSAGE);
+
+    if (confirm == JOptionPane.YES_OPTION) {
+        JOptionPane.showMessageDialog(this,
+                            "Venta actual descartada. Se ha reiniciado el carrito en la ventana principal.",
+                            "Nueva Compra Iniciada",
+                            JOptionPane.INFORMATION_MESSAGE);
+        this.dispose(); // Cierra la ventana de Interfazcobro
+        // El carrito en VentanaPrincipal se limpiará automáticamente
+        // debido al WindowListener que agregamos al cobroFrame.
+    }
     }//GEN-LAST:event_jButton6ActionPerformed
 
     private void jButton3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton3ActionPerformed
@@ -373,6 +404,7 @@ public class Interfazcobro extends javax.swing.JFrame {
             rs = pstmt.getGeneratedKeys();
             if (rs.next()) {
                 idVentaGenerado = rs.getInt(1); // Obtener el ID de la venta generada
+                this.idVentaExitosa = idVentaGenerado;
             } else {
                 throw new SQLException("No se pudo obtener el IdVenta generado después de insertar la venta.");
             }
@@ -414,9 +446,6 @@ public class Interfazcobro extends javax.swing.JFrame {
             pstmt.close(); // Cerrar el PreparedStatement de actualización de stock
 
             JOptionPane.showMessageDialog(this, "Venta registrada exitosamente. ID de Venta: " + idVentaGenerado + ". Cambio: " + txtCambio.getText(), "Venta Exitosa", JOptionPane.INFORMATION_MESSAGE);
-
-            // Cierra esta ventana de cobro
-            this.dispose();
 
         } catch (SQLException ex) {
             // Si ocurre algún error en la base de datos, intentar revertir la transacción
@@ -469,6 +498,73 @@ public class Interfazcobro extends javax.swing.JFrame {
         this.dispose(); // Cierra la ventana de Interfazcobro
     }
     }//GEN-LAST:event_jButton4ActionPerformed
+
+    private void jButton5ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton5ActionPerformed
+        if (idVentaExitosa == -1) {
+        JOptionPane.showMessageDialog(this, "Debe registrar una venta exitosa antes de crear una factura.", "Error", JOptionPane.WARNING_MESSAGE);
+        return;
+    }
+
+    // Definir el nombre del archivo de la factura
+    // Usaremos el ID de la venta y un timestamp para asegurar unicidad
+    String rutaEscritorio = System.getProperty("user.home") + "/Desktop/";
+    String rutaFacturas = rutaEscritorio + "Facturas_Ventas/";
+    java.io.File directorioFacturas = new java.io.File(rutaFacturas);
+    if (!directorioFacturas.exists()) {
+        directorioFacturas.mkdirs(); // Crea el directorio si no existe
+    }
+
+    String nombreArchivo = rutaFacturas + "Factura_Venta_" + idVentaExitosa + "_" + System.currentTimeMillis() + ".txt";
+
+    try (PrintWriter writer = new PrintWriter(new java.io.FileWriter(nombreArchivo))) {
+        writer.println("--- FACTURA DE VENTA ---");
+        writer.println("Fecha: " + new Date()); // Fecha actual
+        writer.println("Cajero en turno: " + nombreCajeroActual); // Nombre del cajero
+
+        writer.println("\n-------------------------");
+        writer.println("ID Venta: " + idVentaExitosa);
+        writer.println("ID Cliente: " + idClienteExitosa);
+        writer.println("-------------------------");
+        writer.println("PRODUCTOS:");
+        writer.println("-------------------------");
+        writer.printf("%-5s %-25s %-10s %-10s %-10s\n", "No.", "Producto", "Cant.", "P. Unit", "Subtotal");
+        writer.println("-------------------------");
+
+        for (int i = 0; i < tablaProductosModel.getRowCount(); i++) {
+            // Asegúrate de que los índices de columna coincidan con tu tabla
+            // Columna 0: No. Producto (no se usa directamente en la DB)
+            String codigoProducto = tablaProductosModel.getValueAt(i, 1).toString(); // "Código"
+            String nombreProducto = tablaProductosModel.getValueAt(i, 2).toString(); // "Nombre"
+            int cantidad = Integer.parseInt(tablaProductosModel.getValueAt(i, 3).toString()); // "Cantidad"
+            double precioUnitario = Double.parseDouble(tablaProductosModel.getValueAt(i, 4).toString()); // "Precio unitario"
+            double subtotalProducto = Double.parseDouble(tablaProductosModel.getValueAt(i, 5).toString()); // "Subtotal"
+
+            writer.printf("%-5d %-25s %-10d %-10.2f %-10.2f\n",
+                          (i + 1), // Número de línea
+                          nombreProducto,
+                          cantidad,
+                          precioUnitario,
+                          subtotalProducto);
+        }
+
+        writer.println("-------------------------");
+        writer.printf("TOTAL A PAGAR: $%.2f\n", totalVentaActual);
+        writer.printf("PAGÓ CON: $%.2f\n", Double.parseDouble(txtPagoCon.getText()));
+        writer.printf("CAMBIO: $%.2f\n", Double.parseDouble(txtCambio.getText()));
+        writer.println("-------------------------");
+        writer.println("¡GRACIAS POR SU COMPRA!");
+        writer.println("-------------------------");
+
+        JOptionPane.showMessageDialog(this, "Factura creada exitosamente en: " + nombreArchivo, "Factura Creada", JOptionPane.INFORMATION_MESSAGE);
+
+        // Cierra la ventana de Interfazcobro después de crear la factura
+        this.dispose();
+
+    } catch (java.io.IOException | NumberFormatException ex) {
+        JOptionPane.showMessageDialog(this, "Error al crear la factura: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        ex.printStackTrace();
+    }
+    }//GEN-LAST:event_jButton5ActionPerformed
 
     public static void main(String args[]) {
 
