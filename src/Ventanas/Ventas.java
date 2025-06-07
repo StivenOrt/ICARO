@@ -1,7 +1,6 @@
 package Ventanas;
 
 import javax.swing.JFrame;
-import Conexiones.Conexion; // Asegúrate de que tu clase de conexión sea correcta
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
@@ -10,23 +9,13 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Calendar;
-import java.util.Date;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.TreeMap;
 
-// Para la gráfica (usaremos JFreeChart)
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.data.category.DefaultCategoryDataset;
-import org.jfree.data.time.Day; // Podrías usar esto para series de tiempo
-import org.jfree.data.time.TimeSeries;
-import org.jfree.data.time.TimeSeriesCollection;
-import org.jfree.data.xy.XYDataset; // Para gráfica lineal
 
 public class Ventas extends javax.swing.JFrame {
     
@@ -47,15 +36,6 @@ public class Ventas extends javax.swing.JFrame {
 
         // Enlazar el botón Calcular al método de acción
         btnCalcular.addActionListener(e -> calcularProyeccion());
-    }
-
-    public Ventas() {
-        initComponents();
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        setLocationRelativeTo(null);
-        setTitle("PROYECCIÓN DE VENTAS Y GANANCIAS");
-        configurarTablaDatos();
-        inicializarComboBoxesFecha();
     }
     
     private void configurarTablaDatos() {
@@ -472,7 +452,7 @@ public class Ventas extends javax.swing.JFrame {
 
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
-                new Ventas().setVisible(true);
+
             }
         });
     }

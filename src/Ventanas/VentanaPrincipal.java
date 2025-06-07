@@ -857,11 +857,6 @@ int confirm = JOptionPane.showConfirmDialog(this, "¿Estás seguro de que quiere
 
 if (confirm == JOptionPane.YES_OPTION) {
     Interfazcobro cobroFrame = new Interfazcobro(this, true, totalVentaActual, idCajeroActual, nombreCajero, conn, (DefaultTableModel)Tabla.getModel(), this);
-    cobroFrame.setVisible(true);
-}
-
-if (confirm == JOptionPane.YES_OPTION) {
-    Interfazcobro cobroFrame = new Interfazcobro(this, true, totalVentaActual, idCajeroActual, nombreCajero, conn, (DefaultTableModel)Tabla.getModel(), this);
 
     cobroFrame.addWindowListener(new java.awt.event.WindowAdapter() {
         @Override
