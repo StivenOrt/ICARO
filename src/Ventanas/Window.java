@@ -205,10 +205,10 @@ public class Window extends javax.swing.JFrame {
                 String nombreCajero = resultado.getString("Nombre");
                 
                 if ("Administrador".equals(rolUsuario)) {
-                    VentanaPrincipal ventanaPrincipal = new VentanaPrincipal(conn, nombreCajero, idUsuarioLogueado); // ¡Pasa la conexión!
+                    VentanaPrincipal ventanaPrincipal = new VentanaPrincipal(conn, nombreCajero, idUsuarioLogueado, rolUsuario); // ¡Pasa la conexión!
                     ventanaPrincipal.setVisible(true);
                 } else if ("Cajero".equals(rolUsuario)) {
-                    VentanaPrincipal ventanaPrincipal = new VentanaPrincipal(conn, nombreCajero, idUsuarioLogueado); // ¡Pasa la conexión!
+                    VentanaPrincipal ventanaPrincipal = new VentanaPrincipal(conn, nombreCajero, idUsuarioLogueado, rolUsuario); // ¡Pasa la conexión!
                     ventanaPrincipal.setVisible(true);
                     
                     WindowBase windowBase = new WindowBase(ventanaPrincipal, this.conn, nombreCajero);

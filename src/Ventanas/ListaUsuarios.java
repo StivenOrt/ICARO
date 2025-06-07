@@ -16,7 +16,8 @@ public class ListaUsuarios extends javax.swing.JFrame {
     private DefaultTableModel modeloTablaUsuarios;
     private Connection conn;
 
-    public ListaUsuarios() {
+    public ListaUsuarios(Connection conexion) {
+        this.conn = conexion;
         initComponents();
         setLocationRelativeTo(null);
         inicializarTablaUsuarios(); // Inicializa el modelo ANTES de cargar datos
@@ -430,7 +431,7 @@ public class ListaUsuarios extends javax.swing.JFrame {
 
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
-                new ListaUsuarios().setVisible(true);
+                
             }
         });
     }

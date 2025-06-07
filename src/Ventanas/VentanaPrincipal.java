@@ -21,11 +21,13 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     private int numeroProductoCarrito = 1;
     private double totalVentaActual = 0.0;
     private int idCajeroActual;
+    private String rolUsuarioActual;
     
-    public VentanaPrincipal(Connection conexion, String nombre, int idUsuarioLogeado) {
+    public VentanaPrincipal(Connection conexion, String nombre, int idUsuarioLogeado, String rolDelUsuarioLogueado) {
         this.conn = conexion;
         this.nombreCajero = nombre;
         this.idCajeroActual = idUsuarioLogeado;
+        this.rolUsuarioActual = rolDelUsuarioLogueado;
         initComponents();
         lblCajeroEnTurno.setText(this.nombreCajero);
         ajustarBotones();
@@ -276,6 +278,10 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         ex.printStackTrace();
     }
 }
+    
+    private String obtenerRolDelUsuarioLogueado() {
+        return this.rolUsuarioActual; 
+    }
     
     public void obtenerDetallesVentaYAbrirFactura(String idVenta) {
         
@@ -779,13 +785,27 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     }//GEN-LAST:event_jButton8ActionPerformed
 
     private void jButton6ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton6ActionPerformed
-        Ventas proyeccionVentasFrame = new Ventas(this, this.conn);
-        proyeccionVentasFrame.setVisible(true);
+        String rolDelUsuarioLogueado = obtenerRolDelUsuarioLogueado();
+
+    if (!rolDelUsuarioLogueado.equalsIgnoreCase("Administrador")) {
+        JOptionPane.showMessageDialog(this, "No tienes permisos para acceder a la ventana de Ventas.", "Acceso Denegado", JOptionPane.WARNING_MESSAGE);
+        return;
+    }
+
+    Ventas ventanaVentas = new Ventas(this, conn);
+    ventanaVentas.setVisible(true);
     }//GEN-LAST:event_jButton6ActionPerformed
 
     private void jButton5ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton5ActionPerformed
-        HistorialVentas historialFrame = new HistorialVentas(conn);
-        historialFrame.setVisible(true);
+        String rolDelUsuarioLogueado = obtenerRolDelUsuarioLogueado();
+
+    if (!rolDelUsuarioLogueado.equalsIgnoreCase("Administrador")) {
+        JOptionPane.showMessageDialog(this, "No tienes permisos para acceder al Historial de Ventas.", "Acceso Denegado", JOptionPane.WARNING_MESSAGE);
+        return;
+    }
+
+    HistorialVentas ventanaHistorial = new HistorialVentas(conn);
+    ventanaHistorial.setVisible(true);
     }//GEN-LAST:event_jButton5ActionPerformed
 
     private void jButton4ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton4ActionPerformed
@@ -794,7 +814,15 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     }//GEN-LAST:event_jButton4ActionPerformed
 
     private void jButton3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton3ActionPerformed
-        new ListaUsuarios().setVisible(true);
+        String rolDelUsuarioLogueado = obtenerRolDelUsuarioLogueado();
+
+    if (!rolDelUsuarioLogueado.equalsIgnoreCase("Administrador")) {
+        JOptionPane.showMessageDialog(this, "No tienes permisos para acceder a la Lista de Usuarios.", "Acceso Denegado", JOptionPane.WARNING_MESSAGE);
+        return;
+    }
+
+        ListaUsuarios ventanaUsuarios = new ListaUsuarios(conn);
+        ventanaUsuarios.setVisible(true);
     }//GEN-LAST:event_jButton3ActionPerformed
 
     private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
