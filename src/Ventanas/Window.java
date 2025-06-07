@@ -6,6 +6,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
+import java.sql.SQLException;
 
 
 public class Window extends javax.swing.JFrame {
@@ -214,12 +215,24 @@ public class Window extends javax.swing.JFrame {
                     windowBase.setVisible(true);
                 }
                 dispose();
-            } else {
-                JOptionPane.showMessageDialog(null, "Usuario o contraseña incorrectos.");
-            }
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(null, "Error al iniciar sesión.");
+                } else {
+                    JOptionPane.showMessageDialog(this, "Usuario o contraseña incorrectos...", "Error", JOptionPane.WARNING_MESSAGE);
+                    campo_pass.setText("");
+                    campo_usuario.requestFocusInWindow();
+                }
+            }catch (Exception e) {
+        JOptionPane.showMessageDialog(this, "Usuario o contraseña incorrectos...", "Error", JOptionPane.WARNING_MESSAGE);
+        e.printStackTrace(); 
+        campo_pass.setText("");
+        campo_usuario.requestFocusInWindow();
+        }finally {
+        try {
+            if (resultado != null) resultado.close();
+            if (consulta != null) consulta.close();
+        } catch (SQLException ex) {
+            ex.printStackTrace();
         }
+    }
     }//GEN-LAST:event_jButton1ActionPerformed
 
     private void campo_usuarioActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_campo_usuarioActionPerformed

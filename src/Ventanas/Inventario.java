@@ -20,9 +20,11 @@ public class Inventario extends javax.swing.JFrame {
     private DefaultTableModel modeloTablaInventario;
     private TableRowSorter<DefaultTableModel> sorter;
     private Connection conn;
+    
 
-    public Inventario() {
+    public Inventario(java.awt.Frame parent, Connection conexion) {
         initComponents();
+        this.conn = conexion;
         inicializarTabla();
         setupTable(); // Configura el modelo de la tabla y el sorter
         cargarInventario(); // Carga los datos iniciales de los productos
@@ -111,9 +113,7 @@ public class Inventario extends javax.swing.JFrame {
         ResultSet rs = null;
 
         try {
-            // Asegúrate que esta query selecciona todas las columnas que quieres mostrar
-            // Y que el orden de las columnas en la SELECT coincida con el orden en que las agregas a la fila.
-            String sql = "SELECT IdProducto, Nombre, Precio, PrecioCompra, Stock, Marca, Descuento, Descripcion FROM producto";
+            String sql = "SELECT IdProducto, Nombre, Precio, Stock, Marca, Descripcion, PrecioCompra, Descuento, Activo FROM producto WHERE Activo = TRUE";
             pstmt = currentConnection.prepareStatement(sql);
             rs = pstmt.executeQuery();
 
@@ -189,31 +189,29 @@ public class Inventario extends javax.swing.JFrame {
                 return;
             }
 
-            String sql = "DELETE FROM producto WHERE IdProducto = ?";
+            String sql = "UPDATE producto SET Activo = FALSE WHERE IdProducto = ?";
+            
             PreparedStatement pstmt = null;
+            try { 
+                pstmt = conn.prepareStatement(sql);
+                pstmt.setString(1, idProducto); 
 
-            try {
-                pstmt = currentConnection.prepareStatement(sql);
-                pstmt.setString(1, idProducto);
-
-                int filasAfectadas = pstmt.executeUpdate();
-
-                if (filasAfectadas > 0) {
-                    JOptionPane.showMessageDialog(this, "Producto eliminado exitosamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
-                    cargarInventario(); 
-                } else {
-                    JOptionPane.showMessageDialog(this, "No se pudo eliminar el producto. Puede que el ID no exista o haya dependencias.", "Error", JOptionPane.ERROR_MESSAGE);
-                }
-            } catch (SQLException ex) {
-                JOptionPane.showMessageDialog(this, "Error al eliminar el producto: " + ex.getMessage(), "Error de SQL", JOptionPane.ERROR_MESSAGE);
-                ex.printStackTrace();
-            } finally {
-                try {
-                    if (pstmt != null) pstmt.close();
-                } catch (SQLException ex) {
-                    ex.printStackTrace();
-                }
-            }
+        int filasAfectadas = pstmt.executeUpdate();
+        if (filasAfectadas > 0) {
+            JOptionPane.showMessageDialog(null, "Producto marcado como inactivo exitosamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+        } else {
+            JOptionPane.showMessageDialog(null, "No se encontró el producto o no se pudo marcar como inactivo.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    } catch (SQLException e) {
+        JOptionPane.showMessageDialog(null, "Error al marcar el producto como inactivo: " + e.getMessage(), "Error de Base de Datos", JOptionPane.ERROR_MESSAGE);
+        e.printStackTrace();
+    } finally {
+        try {
+            if (pstmt != null) pstmt.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
         }
     }
     
@@ -645,7 +643,7 @@ public class Inventario extends javax.swing.JFrame {
 
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
-                new Inventario().setVisible(true);
+
             }
         });
     }

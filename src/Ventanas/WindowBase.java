@@ -1,5 +1,7 @@
 package Ventanas;
 
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.sql.Connection;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
@@ -22,6 +24,21 @@ public class WindowBase extends javax.swing.JFrame {
     initComponents();
     setLocationRelativeTo(null);
     setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+    this.getRootPane().setDefaultButton(btnIngresarPresupuesto);
+    
+    if (txtPresupuestoInicial != null) { // Verificación para evitar NullPointerException si initComponents() falla
+            txtPresupuestoInicial.addKeyListener(new KeyAdapter() {
+                @Override
+                public void keyPressed(KeyEvent evt) {
+                    if (evt.getKeyCode() == KeyEvent.VK_ENTER) {
+                        // Llamar directamente al método que maneja la lógica del botón
+                        btnIngresarPresupuestoActionPerformed(null); // Pasamos 'null' si no se usa el ActionEvent
+                    }
+                }
+            });
+        } else {
+            System.err.println("Advertencia: txtPresupuestoInicial es null. No se pudo adjuntar KeyListener.");
+        }
     }
     
     private void guardarBaseDeDatos(String nombreCajero, double valorBase) {
@@ -42,9 +59,8 @@ public class WindowBase extends javax.swing.JFrame {
         
          if (filasAfectadas > 0) {
                 JOptionPane.showMessageDialog(this, "Base diaria registrada correctamente!", "Éxito", JOptionPane.INFORMATION_MESSAGE);
-                // Si todo va bien, actualiza la VentanaPrincipal y cierra
                 if (ventanaPrincipal != null) {
-                    ventanaPrincipal.setPresupuestoBase(String.valueOf(valorBase)); // Asegúrate de que este método exista en VentanaPrincipal
+                    ventanaPrincipal.setPresupuestoBase(String.valueOf(valorBase));
                 }
                 dispose(); // Cierra WindowBase
             } else {
@@ -206,7 +222,6 @@ public class WindowBase extends javax.swing.JFrame {
         double valorPresupuesto = Double.parseDouble(presupuesto);
         guardarBaseDeDatos(nombreCajero, valorPresupuesto);
         ventanaPrincipal.setPresupuestoBase(String.valueOf(valorPresupuesto));
-        dispose();
     } catch (NumberFormatException ex) {
         JOptionPane.showMessageDialog(this, "Ingrese un valor numérico válido.", "Error", JOptionPane.ERROR_MESSAGE);
         ex.printStackTrace();

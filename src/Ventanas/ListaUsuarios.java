@@ -33,8 +33,22 @@ public class ListaUsuarios extends javax.swing.JFrame {
         modeloTablaUsuarios.addColumn("Numero");
         modeloTablaUsuarios.addColumn("Contraseña"); // **ADVERTENCIA DE SEGURIDAD: NO MOSTRAR CONTRASEÑAS EN CLARO EN UI REAL**
         modeloTablaUsuarios.addColumn("Rol");
-        // jTable1 es el nombre de tu tabla en el diseñador
-        jTable1.setModel(modeloTablaUsuarios);
+        
+        modeloTablaUsuarios = new DefaultTableModel() {
+        @Override
+        public boolean isCellEditable(int row, int column) {
+            return false;
+        }
+    }; 
+
+        modeloTablaUsuarios.addColumn("IdUsuario");
+        modeloTablaUsuarios.addColumn("Nombre");
+        modeloTablaUsuarios.addColumn("Correo");
+        modeloTablaUsuarios.addColumn("Numero");
+        modeloTablaUsuarios.addColumn("Contraseña"); // **ADVERTENCIA DE SEGURIDAD: NO MOSTRAR CONTRASEÑAS EN CLARO EN UI REAL**
+        modeloTablaUsuarios.addColumn("Rol");
+
+        jTable1.setModel(modeloTablaUsuarios);        
     }
     
      private void configurarBuscador() {

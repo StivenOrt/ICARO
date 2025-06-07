@@ -6,59 +6,128 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Timestamp; // Para fechas
+import java.sql.Timestamp;
 import javax.swing.JOptionPane;
-import javax.swing.JTable;
 import javax.swing.table.DefaultTableModel;
-import java.util.Date; // Para manejo de fechas, si usas JDateChooser o JTextField para fechas
-import java.text.SimpleDateFormat; // Para formatear fechas si usas JTextField
-import java.text.ParseException; // Para manejar errores de parseo de fecha
+import java.util.Date; 
+import java.text.SimpleDateFormat; 
+import java.text.ParseException; 
+import javax.swing.RowFilter;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.table.TableRowSorter;
 
 public class HistorialVentas extends javax.swing.JFrame {
     
     private DefaultTableModel modeloTablaVentas;
     private DefaultTableModel modeloTablaDetalleVentas;
     private Connection conn;
+    private TableRowSorter<DefaultTableModel> sorter;
+    private DefaultTableModel modeloVentas; 
+    private DefaultTableModel modeloProductosVendidos; 
+    private TableRowSorter<DefaultTableModel> sorterVentas;
 
     public HistorialVentas() {
         initComponents();
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        
-        configurarColumnasTablas();
     }
     
     public HistorialVentas(Connection conexion) {
         this.conn = conexion;
         initComponents();
-        setLocationRelativeTo(null); // Centrar la ventana
+        
+        if (txtTotalEnVentas != null) {
+            txtTotalEnVentas.setEditable(false);
+        } else {
+            System.err.println("Advertencia: txtTotalEnVentas es null. No se pudo configurar como no editable.");
+        }
+        
+        String[] columnNamesVentas = {
+    "Número de compra", "ID Cliente", "Cajero en Turno", "Fecha", "Total de Venta"
+};
+
+        this.modeloVentas = new DefaultTableModel(columnNamesVentas, 0) {
+        @Override
+        public boolean isCellEditable(int row, int column) {
+            return false; // Hace todas las celdas de 'tablaVentas' no editables
+    }
+};
+        this.tablaVentas.setModel(this.modeloVentas);
+
+        this.sorterVentas = new TableRowSorter<>(this.modeloVentas);
+        this.tablaVentas.setRowSorter(this.sorterVentas);
+        
+        String[] columnNamesProductosVendidos = {
+        "ID Venta", "Código Producto", "Nombre Producto", "Cantidad", "Precio Unitario", "Subtotal", "Fecha Venta"
+    };
+
+    this.modeloProductosVendidos = new DefaultTableModel(columnNamesProductosVendidos, 0) {
+    @Override
+    public boolean isCellEditable(int row, int column) {
+        return false; // Hace todas las celdas de 'tablaProductosVendidos' no editables
+    }
+};
+this.tablaProductosVendidos.setModel(this.modeloProductosVendidos);
+        
+        setLocationRelativeTo(null); 
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
-        // Inicializar los modelos de tabla con sus columnas
-        // (Puedes hacerlo en initComponents() o aquí, pero asegúrate de que se haga)
-        // Esto es importante para que las columnas sean correctas y estén listas para llenar.
         modeloTablaVentas = (DefaultTableModel) tablaVentas.getModel();
         modeloTablaDetalleVentas = (DefaultTableModel) tablaProductosVendidos.getModel();
+        
+        sorter = new TableRowSorter<>(modeloTablaVentas);
+        tablaVentas.setRowSorter(sorter);
+        
+        setupRealtimeSearch();
 
-        // Configurar las columnas de los modelos si no están ya en initComponents()
-        // Limpiar columnas existentes si NetBeans ya las puso y añadirlas de nuevo
         configurarColumnasTablas();
 
-        // Cargar datos iniciales al abrir la ventana
         cargarTodasLasVentas();
 
-        // Habilitar selección múltiple en la tabla superior
         tablaVentas.setSelectionMode(javax.swing.ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
-        
-        // Añadir listener para cuando se selecciona una fila en la tabla superior
+
         tablaVentas.getSelectionModel().addListSelectionListener(new javax.swing.event.ListSelectionListener() {
             public void valueChanged(javax.swing.event.ListSelectionEvent evt) {
-                if (!evt.getValueIsAdjusting()) { // Evita que se dispare múltiples veces
+                if (!evt.getValueIsAdjusting()) { 
                     cargarDetalleVentasSeleccionadas();
                 }
             }
         });
     }
+    
+    private void setupRealtimeSearch() {
+    txtBusquedaVenta.getDocument().addDocumentListener(new DocumentListener() {
+        @Override
+        public void insertUpdate(DocumentEvent e) {
+            filterTable();
+        }
+
+        @Override
+        public void removeUpdate(DocumentEvent e) {
+            filterTable();
+        }
+
+        @Override
+        public void changedUpdate(DocumentEvent e) {
+        }
+    });
+}
+    
+    private void filterTable() {
+    String text = txtBusquedaVenta.getText().trim(); 
+
+    if (text.length() == 0) {
+        sorter.setRowFilter(null); 
+    } else {
+        try {
+            sorter.setRowFilter(RowFilter.regexFilter("(?i)" + text, 0)); // (?i) para ignorar mayúsculas/minúsculas
+        } catch (java.util.regex.PatternSyntaxException e) {
+            System.err.println("Error en el patrón de búsqueda: " + e.getMessage());
+            JOptionPane.showMessageDialog(this, "Patrón de búsqueda inválido", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+}
     
     private void configurarColumnasTablas() {
         // Tabla de Ventas (Superior)
@@ -167,7 +236,7 @@ public class HistorialVentas extends javax.swing.JFrame {
         double subtotal = rs.getDouble("Subtotal");
         Timestamp fechaVenta = rs.getTimestamp("Fecha");
 
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+        SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yy HH:mm");
         String fechaFormateada = sdf.format(new Date(fechaVenta.getTime()));
 
         modeloTablaDetalleVentas.addRow(new Object[]{
@@ -218,8 +287,8 @@ public class HistorialVentas extends javax.swing.JFrame {
     // Filtro por rango de fechas
     String fechaInicioStr = txtFechaInicio.getText().trim();
     String fechaFinStr = txtFechaFin.getText().trim();
-    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd"); // Formato esperado
-    sdf.setLenient(false); // No permite fechas "creativas" (ej. 2023-02-30)
+    SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yy"); 
+    sdf.setLenient(false); 
 
     try {
         if (!fechaInicioStr.isEmpty()) {
@@ -235,7 +304,7 @@ public class HistorialVentas extends javax.swing.JFrame {
             parametros.add(new Timestamp(fechaFinMasUnDia.getTime()));
         }
     } catch (ParseException e) {
-        JOptionPane.showMessageDialog(this, "Por favor, ingrese fechas en formato AAAA-MM-DD.", "Formato de Fecha Inválido", JOptionPane.WARNING_MESSAGE);
+        JOptionPane.showMessageDialog(this, "Por favor, ingrese fechas en formato DD/MM/AA.", "Formato de Fecha Inválido", JOptionPane.WARNING_MESSAGE);
         cargarTodasLasVentas(); // Recargar todas las ventas si la fecha es inválida
         return;
     }
@@ -259,8 +328,8 @@ public class HistorialVentas extends javax.swing.JFrame {
                 Timestamp fechaVenta = rs.getTimestamp("Fecha");
                 double totalVenta = rs.getDouble("Total");
 
-                SimpleDateFormat displaySdf = new SimpleDateFormat("yyyy-MM-dd HH:mm");
-                String fechaFormateada = displaySdf.format(new Date(fechaVenta.getTime()));
+                SimpleDateFormat displaySDF = new SimpleDateFormat("dd/MM/yy HH:mm");
+                String fechaFormateada = displaySDF.format(new Date(fechaVenta.getTime()));
 
                 modeloTablaVentas.addRow(new Object[]{
                     idVenta,
@@ -350,9 +419,21 @@ public class HistorialVentas extends javax.swing.JFrame {
         jLabel3.setForeground(new java.awt.Color(255, 255, 255));
         jLabel3.setText("Busqueda por fecha del:");
 
+        txtFechaInicio.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                txtFechaInicioActionPerformed(evt);
+            }
+        });
+
         jLabel4.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
         jLabel4.setForeground(new java.awt.Color(255, 255, 255));
         jLabel4.setText("Al:");
+
+        txtFechaFin.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                txtFechaFinActionPerformed(evt);
+            }
+        });
 
         btnBuscar.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
         btnBuscar.setForeground(new java.awt.Color(0, 0, 51));
@@ -592,6 +673,28 @@ public class HistorialVentas extends javax.swing.JFrame {
     private void btnBuscarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnBuscarActionPerformed
         aplicarFiltros();
     }//GEN-LAST:event_btnBuscarActionPerformed
+
+    private void txtFechaInicioActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txtFechaInicioActionPerformed
+        txtFechaInicio.addKeyListener(new java.awt.event.KeyAdapter() {
+        @Override
+        public void keyPressed(java.awt.event.KeyEvent evt) {
+            if (evt.getKeyCode() == java.awt.event.KeyEvent.VK_ENTER) {
+                aplicarFiltros(); 
+            }
+        }
+    });
+    }//GEN-LAST:event_txtFechaInicioActionPerformed
+
+    private void txtFechaFinActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txtFechaFinActionPerformed
+        txtFechaFin.addKeyListener(new java.awt.event.KeyAdapter() {
+        @Override
+        public void keyPressed(java.awt.event.KeyEvent evt) {
+            if (evt.getKeyCode() == java.awt.event.KeyEvent.VK_ENTER) {
+                aplicarFiltros();
+            }
+        }
+    });
+    }//GEN-LAST:event_txtFechaFinActionPerformed
 
     public static void main(String args[]) {
 

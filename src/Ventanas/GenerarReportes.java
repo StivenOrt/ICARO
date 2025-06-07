@@ -1,7 +1,6 @@
 package Ventanas;
 
 import javax.swing.JFrame;
-import Conexiones.Conexion; // Asegúrate de que esta clase exista y funcione
 import javax.swing.*;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -39,19 +38,9 @@ import javax.swing.table.DefaultTableModel;
 public class GenerarReportes extends javax.swing.JFrame {
     
     private String formatoSeleccionado = "";
-    private Connection conn; // Atributo para la conexión a la DB
-    private String tipoDeReporte; // "inventario" o "ventas"
-    private DefaultTableModel datosTablaReporte; // Para datos de ventas (si aplica)
-    
-    public GenerarReportes() {
-        initComponents();
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        setLocationRelativeTo(null); // Centrar la ventana
-        setTitle("GENERAR REPORTES");
-        this.conn = null; // Inicializar a null si no se pasa conexión
-        this.tipoDeReporte = ""; // Valor por defecto
-        this.datosTablaReporte = null; // Por defecto no hay datos de tabla
-    }
+    private Connection conn;
+    private String tipoDeReporte;
+    private DefaultTableModel datosTablaReporte;
     
     public GenerarReportes(java.awt.Frame parent, Connection conexion, String tipoReporte, DefaultTableModel datosTabla) {
         super();
@@ -617,7 +606,7 @@ public class GenerarReportes extends javax.swing.JFrame {
 
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
-                new GenerarReportes().setVisible(true);
+
             }
         });
     }

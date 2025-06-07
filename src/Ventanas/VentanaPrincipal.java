@@ -11,7 +11,7 @@ import java.sql.PreparedStatement;
 import javax.swing.table.DefaultTableModel;
 import java.sql.SQLException;
 import java.sql.ResultSet;
-import java.sql.Timestamp;
+import Ventanas.factura;
 import java.util.Date;
 
 public class VentanaPrincipal extends javax.swing.JFrame {
@@ -19,7 +19,7 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     private Connection conn;
     private String nombreCajero;
     private int numeroProductoCarrito = 1;
-    private double totalVenta = 0.0;
+    private double totalVentaActual = 0.0;
     private int idCajeroActual;
     
     public VentanaPrincipal(Connection conexion, String nombre, int idUsuarioLogeado) {
@@ -29,7 +29,8 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         initComponents();
         lblCajeroEnTurno.setText(this.nombreCajero);
         ajustarBotones();
-
+        jTextFieldTotalVenta.setEditable(false);
+        
         // 🔧 Muy importante: asegurarte que el content pane tiene BorderLayout
         getContentPane().setLayout(new java.awt.BorderLayout());
         getContentPane().add(jPanelPrincipal, java.awt.BorderLayout.CENTER);
@@ -103,7 +104,7 @@ public class VentanaPrincipal extends javax.swing.JFrame {
                         productoEncontradoEnCarrito = true;
                         
                         // Solo actualiza el total de la venta con el subtotal del nuevo producto
-                        totalVenta += subtotal; 
+                        totalVentaActual += subtotal; 
                         break;
                     }
                 }
@@ -111,7 +112,7 @@ public class VentanaPrincipal extends javax.swing.JFrame {
                 if (!productoEncontradoEnCarrito) {
                     model.addRow(new Object[]{numeroProductoCarrito, codigoProducto, nombreProducto, cantidad, precioUnitario, subtotal});
                     numeroProductoCarrito++;
-                    totalVenta += subtotal;
+                    totalVentaActual += subtotal;
                 }
                 
                 String updateStockSql = "UPDATE producto SET Stock = Stock - ? WHERE IdProducto = ?";
@@ -121,7 +122,7 @@ public class VentanaPrincipal extends javax.swing.JFrame {
                     updatePst.executeUpdate();
                 }
 
-                jTextFieldTotalVenta.setText(String.format("%.2f", totalVenta));
+                jTextFieldTotalVenta.setText(String.format("%.2f", totalVentaActual));
                 jTextFieldBusqueda.setText("");
                 jTextFieldCantidad.setText("1");
                 jTextFieldBusqueda.requestFocusInWindow();
@@ -227,7 +228,7 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     jButton11.setVerticalTextPosition(SwingConstants.CENTER);
 }
     private void cerrarVentana() {
-        Conexion.cerrarConexion(); // Cerrar la conexión al cerrar la ventana principal
+        Conexion.cerrarConexion(); 
         dispose();
         System.exit(0);
     }
@@ -235,21 +236,144 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     private void reajustarNumeroProductoCarrito() {
     DefaultTableModel model = (DefaultTableModel) Tabla.getModel();
     for (int i = 0; i < model.getRowCount(); i++) {
-        model.setValueAt(i + 1, i, 0); // Columna "No. Producto" (Índice 0)
+        model.setValueAt(i + 1, i, 0);
     }
-    // Asegurarse de que el numeroProductoCarrito global refleje la cuenta actual + 1 para el siguiente
     numeroProductoCarrito = model.getRowCount() + 1;
     }
     
     public void vaciarCarritoYReiniciar() {
     DefaultTableModel model = (DefaultTableModel) Tabla.getModel();
     model.setRowCount(0); // Vaciar la tabla del carrito
-    totalVenta = 0.0; // Resetear el total de la venta
-    jTextFieldTotalVenta.setText(String.format("%.2f", totalVenta)); // Actualizar el campo de total visual
+    totalVentaActual = 0.0; // Resetear el total de la venta
+    jTextFieldTotalVenta.setText(String.format("%.2f", totalVentaActual)); // Actualizar el campo de total visual
     numeroProductoCarrito = 1; // Resetear el contador para la columna "No. Producto"
     jTextFieldBusqueda.setText("");
     jTextFieldBusqueda.requestFocusInWindow(); // Volver a enfocar el campo de búsqueda
 }    
+    
+    private void cargarUltimaVentaYAbrirFactura() {
+    String idVenta = null;
+
+    // 1. Consulta para obtener el ID de la última venta registrada
+    String sqlLastSale = "SELECT IdVenta FROM venta ORDER BY Fecha DESC, IdVenta DESC LIMIT 1";
+
+    try (PreparedStatement pstmtLastSale = conn.prepareStatement(sqlLastSale);
+         ResultSet rsLastSale = pstmtLastSale.executeQuery()) {
+
+        if (rsLastSale.next()) {
+            idVenta = rsLastSale.getString("IdVenta");
+            // Una vez que tenemos el ID, obtenemos todos los detalles y abrimos la factura
+            obtenerDetallesVentaYAbrirFactura(idVenta);
+        } else {
+            JOptionPane.showMessageDialog(this, "No hay ventas registradas para cargar la factura.", "Sin Ventas", JOptionPane.INFORMATION_MESSAGE);
+        }
+
+    } catch (SQLException ex) {
+        JOptionPane.showMessageDialog(this, "Error de base de datos al obtener el último ticket: " + ex.getMessage(), "Error SQL", JOptionPane.ERROR_MESSAGE);
+        ex.printStackTrace();
+    } catch (Exception ex) {
+        JOptionPane.showMessageDialog(this, "Error inesperado al cargar la última venta: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        ex.printStackTrace();
+    }
+}
+    
+    public void obtenerDetallesVentaYAbrirFactura(String idVenta) {
+        
+        PreparedStatement pstmtVenta = null;
+        ResultSet rsVenta = null;
+        PreparedStatement pstmtDetalles = null;
+        ResultSet rsDetalles = null;
+
+    // Consulta para obtener todos los datos de la venta, cliente y cajero
+    String sqlVenta = "SELECT v.Fecha, v.Total, c.Nombre AS NombreCliente, c.Identificacion AS IdentificacionCliente, " +
+                      "c.Correo AS CorreoCliente, c.Telefono AS TelefonoCliente, " +
+                      "u.Nombre AS NombreCajero " +
+                      "FROM venta v " +
+                      "JOIN cliente c ON v.IdCliente = c.IdCliente " +
+                      "JOIN usuario u ON v.IdUsuario = u.IdUsuario " +
+                      "WHERE v.IdVenta = ?";
+
+        try {
+            
+            if (conn == null || conn.isClosed()) {
+                JOptionPane.showMessageDialog(this, "La conexión a la base de datos no está activa.", "Error de Conexión", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            
+            pstmtVenta = conn.prepareStatement(sqlVenta);
+            pstmtVenta.setString(1, idVenta);
+            rsVenta = pstmtVenta.executeQuery();
+
+        if (rsVenta.next()) {
+            // Recolectar todos los datos necesarios para la factura
+            Date fechaVenta = rsVenta.getTimestamp("Fecha");
+            double totalFactura = rsVenta.getDouble("Total");
+            String clienteNombre = rsVenta.getString("NombreCliente");
+            String clienteCorreo = rsVenta.getString("CorreoCliente");
+            String clienteTelefono = rsVenta.getString("TelefonoCliente"); // <-- Ojo: `rsVulta` debe ser `rsVenta` aquí!
+            String cajeroNombre = rsVenta.getString("NombreCajero");
+            String clienteIdentificacion = rsVenta.getString("IdentificacionCliente");
+            String clientePais = "Colombia";
+
+            // Preparar el DefaultTableModel para los productos
+            DefaultTableModel modeloTablaProductosFactura = new DefaultTableModel();
+            modeloTablaProductosFactura.addColumn("Cantidad");
+            modeloTablaProductosFactura.addColumn("Nombre del Producto");
+            modeloTablaProductosFactura.addColumn("Valor unitario");
+            modeloTablaProductosFactura.addColumn("Total");
+            
+            String sqlDetalle = "SELECT p.Nombre AS NombreDelProducto, dv.Cantidad, dv.PrecioUnitario, dv.Subtotal " + 
+                                "FROM detalleventa dv " +
+                                "JOIN producto p ON dv.IdProducto = p.IdProducto " +
+                                "WHERE dv.IdVenta = ?";
+
+            // 2. Obtener detalles de los productos vendidos
+            pstmtDetalles = conn.prepareStatement(sqlDetalle);
+            pstmtDetalles.setString(1, idVenta);
+            rsDetalles = pstmtDetalles.executeQuery();
+
+            while (rsDetalles.next()) {
+                    modeloTablaProductosFactura.addRow(new Object[]{ // <--- **USANDO `modeloTablaProductosFactura`**
+                    rsDetalles.getInt("Cantidad"),
+                    rsDetalles.getString("NombreDelProducto"),
+                    rsDetalles.getDouble("PrecioUnitario"), // Pasa como double, la factura formateará
+                    rsDetalles.getDouble("Subtotal") // Pasa como double, la factura formateará
+                });
+            }
+
+            // 3. Crear y abrir la ventana 'factura', pasando TODOS los datos
+            factura facturaFrame = new factura(
+                    this.conn,
+                    idVenta,
+                    fechaVenta, totalFactura,
+                    clienteNombre,
+                    clienteCorreo,
+                    clienteTelefono,
+                    cajeroNombre,
+                    clienteIdentificacion,
+                    clientePais,
+                    modeloTablaProductosFactura
+                );
+            facturaFrame.setVisible(true);
+            facturaFrame.setLocationRelativeTo(this);
+
+        } else {
+                JOptionPane.showMessageDialog(this, "No se encontraron detalles para la venta ID: " + idVenta, "Error de Factura", JOptionPane.ERROR_MESSAGE);
+            }
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, "Error al obtener detalles de la venta para la factura: " + ex.getMessage(), "Error SQL", JOptionPane.ERROR_MESSAGE);
+            ex.printStackTrace();
+        } finally {
+            try {
+                if (rsDetalles != null) rsDetalles.close();
+                if (pstmtDetalles != null) pstmtDetalles.close();
+                if (rsVenta != null) rsVenta.close();
+                if (pstmtVenta != null) pstmtVenta.close();
+            } catch (SQLException closeEx) {
+                System.err.println("Error al cerrar recursos en obtenerDetallesVentaYAbrirFactura: " + closeEx.getMessage());
+            }
+        }
+}
 
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
@@ -655,7 +779,8 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     }//GEN-LAST:event_jButton8ActionPerformed
 
     private void jButton6ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton6ActionPerformed
-        new Ventas().setVisible(true);
+        Ventas proyeccionVentasFrame = new Ventas(this, this.conn);
+        proyeccionVentasFrame.setVisible(true);
     }//GEN-LAST:event_jButton6ActionPerformed
 
     private void jButton5ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton5ActionPerformed
@@ -673,11 +798,12 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     }//GEN-LAST:event_jButton3ActionPerformed
 
     private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
-        new Inventario().setVisible(true);
+        Inventario inventarioFrame = new Inventario(this, this.conn);
+        inventarioFrame.setVisible(true);
     }//GEN-LAST:event_jButton2ActionPerformed
 
     private void jTextFieldTotalVentaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextFieldTotalVentaActionPerformed
-        // TODO add your handling code here:
+        
     }//GEN-LAST:event_jTextFieldTotalVentaActionPerformed
 
     private void jButton13KeyPressed(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_jButton13KeyPressed
@@ -702,17 +828,16 @@ if (idCajeroActual == -1) { // -1 es el valor por defecto si no se encontró el 
 int confirm = JOptionPane.showConfirmDialog(this, "¿Estás seguro de que quieres finalizar la venta y proceder al cobro?", "Confirmar Venta", JOptionPane.YES_NO_OPTION);
 
 if (confirm == JOptionPane.YES_OPTION) {
-    Interfazcobro cobroFrame = new Interfazcobro(totalVenta, idCajeroActual, this.nombreCajero, conn, (DefaultTableModel) Tabla.getModel());
+    Interfazcobro cobroFrame = new Interfazcobro(this, true, totalVentaActual, idCajeroActual, nombreCajero, conn, (DefaultTableModel)Tabla.getModel(), this);
     cobroFrame.setVisible(true);
 }
 
 if (confirm == JOptionPane.YES_OPTION) {
-    Interfazcobro cobroFrame = new Interfazcobro(totalVenta, idCajeroActual, this.nombreCajero, conn, (DefaultTableModel) Tabla.getModel());
+    Interfazcobro cobroFrame = new Interfazcobro(this, true, totalVentaActual, idCajeroActual, nombreCajero, conn, (DefaultTableModel)Tabla.getModel(), this);
 
     cobroFrame.addWindowListener(new java.awt.event.WindowAdapter() {
         @Override
         public void windowClosed(java.awt.event.WindowEvent windowEvent) {
-            // LLAMA A TU MÉTODO EXISTENTE PARA LIMPIAR EL CARRITO
             vaciarCarritoYReiniciar();
         }
     });
@@ -722,7 +847,7 @@ if (confirm == JOptionPane.YES_OPTION) {
     }//GEN-LAST:event_jButton13ActionPerformed
 
     private void jButton12ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton12ActionPerformed
-        new factura().setVisible(true);
+        cargarUltimaVentaYAbrirFactura();
     }//GEN-LAST:event_jButton12ActionPerformed
 
     private void jButton11ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton11ActionPerformed
@@ -787,8 +912,8 @@ if (confirm == JOptionPane.YES_OPTION) {
             }
 
             // Restar el subtotal del producto cancelado del total de la venta
-            totalVenta -= subtotalCancelado;
-            jTextFieldTotalVenta.setText(String.format("%.2f", totalVenta));
+            totalVentaActual -= subtotalCancelado;
+            jTextFieldTotalVenta.setText(String.format("%.2f", totalVentaActual));
 
             // Eliminar la fila de la tabla
             model.removeRow(selectedRow);
@@ -843,8 +968,8 @@ if (confirm == JOptionPane.YES_OPTION) {
             model.setRowCount(0); // Esto elimina todas las filas
 
             // Reiniciar el total de la venta
-            totalVenta = 0.0;
-            jTextFieldTotalVenta.setText(String.format("%.2f", totalVenta));
+            totalVentaActual = 0.0;
+            jTextFieldTotalVenta.setText(String.format("%.2f", totalVentaActual));
 
             // Reiniciar el contador de productos en el carrito
             numeroProductoCarrito = 1;
