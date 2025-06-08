@@ -429,9 +429,9 @@ public class VentanaPrincipal extends javax.swing.JFrame {
 
         PanelSuperior.setBackground(new java.awt.Color(204, 204, 255));
 
-        AlmacenRopa.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
+        AlmacenRopa.setFont(new java.awt.Font("Segoe UI", 1, 24)); // NOI18N
         AlmacenRopa.setIcon(new javax.swing.ImageIcon(getClass().getResource("/imagenes/carrito.png"))); // NOI18N
-        AlmacenRopa.setText("ALMACEN DE ROPA");
+        AlmacenRopa.setText("ICARO");
 
         jButton2.setBackground(new java.awt.Color(0, 102, 255));
         jButton2.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
